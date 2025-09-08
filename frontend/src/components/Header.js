@@ -1,5 +1,6 @@
 "use client"; // if you use hooks or state
 
+import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 
 export default function Header() {
@@ -19,6 +20,9 @@ export default function Header() {
           </li>
           <li>
             <Link href="/contact">Contact</Link>
+          </li>
+          <li>
+            <UserButton />
           </li>
         </ul>
       </nav>

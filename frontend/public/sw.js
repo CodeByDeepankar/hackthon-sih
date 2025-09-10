@@ -60,21 +60,28 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests: network-first with offline fallback
+  // Navigation requests: keep simple to avoid false offline during OAuth/login redirects
   if (request.mode === 'navigate') {
-    event.respondWith(
-      (async () => {
-        try {
-          const res = await fetch(request);
+    // Allow auth-related routes to bypass entirely (Clerk, OAuth callbacks)
+    if (url.pathname.startsWith('/sign-in') || url.pathname.startsWith('/sign-up')) {
+      return; // default browser fetch
+    }
+    event.respondWith((async () => {
+      try {
+        const res = await fetch(request, { cache: 'no-store' });
+        // Optionally cache only successful HTML responses
+        if (res.ok && res.headers.get('content-type')?.includes('text/html')) {
           const cache = await caches.open(APP_SHELL_CACHE);
           cache.put(request, res.clone());
-          return res;
-        } catch (err) {
-          const cached = await caches.match(request);
-          return cached || caches.match('/offline.html');
         }
-      })()
-    );
+        return res;
+      } catch (e) {
+        // Provide diagnostic logging (visible in SW console)
+        console.warn('[SW] Navigation fetch failed, serving offline fallback:', url.href, e);
+        const cached = await caches.match(request);
+        return cached || caches.match('/offline.html');
+      }
+    })());
     return;
   }
 

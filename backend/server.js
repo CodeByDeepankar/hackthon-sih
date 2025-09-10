@@ -224,8 +224,8 @@ const requireRole = (allowedRoles) => async (req, res, next) => {
 // GET /subjects - List all subjects
 app.get("/subjects", async (req, res) => {
   try {
-    const { class: classFilter } = req.query;
-    
+    const { class: classFilter, schoolId } = req.query;
+
     const result = await subjectsDb.view('subjects', 'all', {
       include_docs: true
     }).catch(() => ({ rows: [] }));
@@ -234,15 +234,18 @@ app.get("/subjects", async (req, res) => {
       id: row.doc._id,
       name: row.doc.name,
       class: row.doc.class,
+      schoolId: row.doc.schoolId || null,
       description: row.doc.description,
       createdBy: row.doc.createdBy,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
 
-    // Filter by class if specified
     if (classFilter) {
       subjects = subjects.filter(s => s.class === classFilter);
+    }
+    if (schoolId) {
+      subjects = subjects.filter(s => s.schoolId === schoolId);
     }
 
     res.json(subjects);
@@ -272,6 +275,7 @@ app.post("/subjects", async (req, res) => {
       _id: `subject:${Date.now()}:${name.toLowerCase().replace(/\s+/g, '-')}`,
       name,
       class: subjectClass,
+      schoolId: userDoc.schoolId || null,
       description: description || "",
       createdBy,
       createdAt: new Date().toISOString(),
@@ -354,7 +358,7 @@ app.delete("/subjects/:id", async (req, res) => {
 // GET /quizzes - List quizzes (with optional subject filter)
 app.get("/quizzes", async (req, res) => {
   try {
-    const { subjectId, createdBy } = req.query;
+    const { subjectId, createdBy, schoolId, class: classFilter } = req.query;
 
     const result = await quizzesDb.view('quizzes', 'all', {
       include_docs: true
@@ -368,19 +372,16 @@ app.get("/quizzes", async (req, res) => {
       difficulty: row.doc.difficulty,
       timeLimit: row.doc.timeLimit,
       createdBy: row.doc.createdBy,
+      schoolId: row.doc.schoolId || null,
+      class: row.doc.class || null,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
 
-    // Filter by subject if specified
-    if (subjectId) {
-      quizzes = quizzes.filter(q => q.subjectId === subjectId);
-    }
-
-    // Filter by creator if specified
-    if (createdBy) {
-      quizzes = quizzes.filter(q => q.createdBy === createdBy);
-    }
+    if (subjectId) quizzes = quizzes.filter(q => q.subjectId === subjectId);
+    if (createdBy) quizzes = quizzes.filter(q => q.createdBy === createdBy);
+    if (schoolId) quizzes = quizzes.filter(q => q.schoolId === schoolId);
+    if (classFilter) quizzes = quizzes.filter(q => q.class === classFilter);
 
     res.json(quizzes);
   } catch (err) {
@@ -417,6 +418,10 @@ app.post("/quizzes", async (req, res) => {
     await subjectsDb.get(subjectId);
 
     const quizId = `quiz:${Date.now()}:${title.toLowerCase().replace(/\s+/g, '-')}`;
+    // Pull subject to inherit schoolId & class
+    let subjectDoc;
+    try { subjectDoc = await subjectsDb.get(subjectId); } catch (e) { return res.status(400).json({ error: 'Subject not found' }); }
+
     const quizDoc = {
       _id: quizId,
       subjectId,
@@ -425,6 +430,8 @@ app.post("/quizzes", async (req, res) => {
       difficulty,
       timeLimit,
       createdBy,
+      schoolId: subjectDoc.schoolId || userDoc.schoolId || null,
+      class: subjectDoc.class || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: "quiz"

@@ -25,7 +25,8 @@ app.post("/progress", async (req, res) => {
     const response = await db.insert(req.body);
     res.json(response);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+  console.error('POST /users/role error:', err);
+  res.status(500).json({ error: err.message });
   }
 });
 
@@ -101,3 +102,13 @@ app.post("/users/role", async (req, res) => {
 });
 
 app.listen(4000, () => console.log("🚀 Server running on http://localhost:4000"));
+
+// Health check
+app.get('/health', async (req, res) => {
+  try {
+    const dbs = await nano.db.list();
+    res.json({ ok: true, dbs });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});

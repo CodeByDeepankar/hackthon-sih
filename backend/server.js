@@ -89,6 +89,27 @@ app.use(express.json());
   }
 })();
 
+// Utility: ensure design documents exist (auto instead of manual /setup-views requirement)
+async function ensureDesignDocs() {
+  const designDocs = [
+    { db: quizCompletionsDb, id: '_design/completions', doc: { _id: '_design/completions', views: { by_user_date: { map: "function(doc){ if(doc.type==='quiz_completion'){ var date=doc.completedAt.split('T')[0]; emit([doc.userId,date],doc); } }" }, by_date: { map: "function(doc){ if(doc.type==='quiz_completion'){ var date=doc.completedAt.split('T')[0]; emit(date,doc); } }" } } } },
+    { db: subjectsDb, id: '_design/subjects', doc: { _id: '_design/subjects', views: { all: { map: "function(doc){ if(doc.type==='subject'){ emit(doc.name,doc); } }" }, by_class: { map: "function(doc){ if(doc.type==='subject'){ emit(doc.class,doc); } }" } } } },
+    { db: quizzesDb, id: '_design/quizzes', doc: { _id: '_design/quizzes', views: { all: { map: "function(doc){ if(doc.type==='quiz'){ emit(doc.createdAt,doc); } }" }, by_subject: { map: "function(doc){ if(doc.type==='quiz'){ emit(doc.subjectId,doc); } }" } } } },
+    { db: questionsDb, id: '_design/questions', doc: { _id: '_design/questions', views: { by_quiz: { map: "function(doc){ if(doc.type==='question'){ emit(doc.quizId,doc); } }" } } } },
+    { db: usersDb, id: '_design/users', doc: { _id: '_design/users', views: { all: { map: "function(doc){ if(doc.type==='userRole'){ emit(doc.userId,doc); } }" }, by_school: { map: "function(doc){ if(doc.type==='userRole' && doc.schoolId){ emit(doc.schoolId,doc); } }" }, by_role: { map: "function(doc){ if(doc.type==='userRole'){ emit(doc.role,doc); } }" } } } },
+    { db: responsesDb, id: '_design/responses', doc: { _id: '_design/responses', views: { all: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.submittedAt,doc); } }" }, by_student: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.studentId,doc); } }" }, by_quiz: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.quizId,doc); } }" } } } }
+  ];
+  for (const item of designDocs) {
+    try { await item.db.get(item.id); } catch (e) {
+      if (e.statusCode === 404) {
+        try { await item.db.insert(item.doc); console.log(`✅ Created design doc ${item.id}`); } catch (ie) { console.warn(`⚠️  Failed creating design doc ${item.id}:`, ie.message); }
+      }
+    }
+  }
+}
+
+ensureDesignDocs().catch(e=>console.warn('Design doc init error', e.message));
+
 // Health check endpoint
 app.get("/health", async (req, res) => {
   try {
@@ -224,8 +245,8 @@ const requireRole = (allowedRoles) => async (req, res, next) => {
 // GET /subjects - List all subjects
 app.get("/subjects", async (req, res) => {
   try {
-    const { class: classFilter, schoolId } = req.query;
-
+    const { class: classFilter } = req.query;
+    
     const result = await subjectsDb.view('subjects', 'all', {
       include_docs: true
     }).catch(() => ({ rows: [] }));
@@ -234,18 +255,15 @@ app.get("/subjects", async (req, res) => {
       id: row.doc._id,
       name: row.doc.name,
       class: row.doc.class,
-      schoolId: row.doc.schoolId || null,
       description: row.doc.description,
       createdBy: row.doc.createdBy,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
 
+    // Filter by class if specified
     if (classFilter) {
       subjects = subjects.filter(s => s.class === classFilter);
-    }
-    if (schoolId) {
-      subjects = subjects.filter(s => s.schoolId === schoolId);
     }
 
     res.json(subjects);
@@ -275,7 +293,6 @@ app.post("/subjects", async (req, res) => {
       _id: `subject:${Date.now()}:${name.toLowerCase().replace(/\s+/g, '-')}`,
       name,
       class: subjectClass,
-      schoolId: userDoc.schoolId || null,
       description: description || "",
       createdBy,
       createdAt: new Date().toISOString(),
@@ -355,16 +372,20 @@ app.delete("/subjects/:id", async (req, res) => {
 // QUIZZES API ENDPOINTS
 // ===========================================
 
-// GET /quizzes - List quizzes (with optional subject filter)
+// GET /quizzes - List quizzes (with optional subject filter); fallback if view missing
 app.get("/quizzes", async (req, res) => {
   try {
-    const { subjectId, createdBy, schoolId, class: classFilter } = req.query;
-
-    const result = await quizzesDb.view('quizzes', 'all', {
-      include_docs: true
-    }).catch(() => ({ rows: [] }));
-
-    let quizzes = result.rows.map(row => ({
+    const { subjectId, createdBy } = req.query;
+    let rows = [];
+    try {
+      const result = await quizzesDb.view('quizzes', 'all', { include_docs: true });
+      rows = result.rows;
+    } catch (e) {
+      // Fallback: full scan (only if view not ready)
+      const all = await quizzesDb.list({ include_docs: true });
+      rows = all.rows.filter(r => r.doc?.type === 'quiz');
+    }
+    let quizzes = rows.map(row => ({
       id: row.doc._id,
       subjectId: row.doc.subjectId,
       title: row.doc.title,
@@ -372,17 +393,11 @@ app.get("/quizzes", async (req, res) => {
       difficulty: row.doc.difficulty,
       timeLimit: row.doc.timeLimit,
       createdBy: row.doc.createdBy,
-      schoolId: row.doc.schoolId || null,
-      class: row.doc.class || null,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
-
     if (subjectId) quizzes = quizzes.filter(q => q.subjectId === subjectId);
     if (createdBy) quizzes = quizzes.filter(q => q.createdBy === createdBy);
-    if (schoolId) quizzes = quizzes.filter(q => q.schoolId === schoolId);
-    if (classFilter) quizzes = quizzes.filter(q => q.class === classFilter);
-
     res.json(quizzes);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -414,14 +429,22 @@ app.post("/quizzes", async (req, res) => {
       return res.status(403).json({ error: "Only teachers can create quizzes" });
     }
 
-    // Verify subject exists
-    await subjectsDb.get(subjectId);
-
-    const quizId = `quiz:${Date.now()}:${title.toLowerCase().replace(/\s+/g, '-')}`;
-    // Pull subject to inherit schoolId & class
+    // Verify subject exists (by id or by name fallback)
     let subjectDoc;
-    try { subjectDoc = await subjectsDb.get(subjectId); } catch (e) { return res.status(400).json({ error: 'Subject not found' }); }
+    try {
+      subjectDoc = await subjectsDb.get(subjectId);
+    } catch (e) {
+      // Fallback: search by name if user passed name/slug instead of id
+      try {
+        const subjView = await subjectsDb.view('subjects','all',{ include_docs:true });
+        const match = subjView.rows.find(r => [r.doc.name.toLowerCase(), r.doc.name.toLowerCase().replace(/\s+/g,'-')].includes(subjectId.toLowerCase()));
+        if (match) subjectDoc = match.doc; else throw e;
+      } catch(inner){
+        return res.status(400).json({ error: 'Subject not found. Provide valid subjectId.' });
+      }
+    }
 
+  const quizId = `quiz:${Date.now()}:${title.toLowerCase().replace(/\s+/g, '-')}`;
     const quizDoc = {
       _id: quizId,
       subjectId,
@@ -430,8 +453,6 @@ app.post("/quizzes", async (req, res) => {
       difficulty,
       timeLimit,
       createdBy,
-      schoolId: subjectDoc.schoolId || userDoc.schoolId || null,
-      class: subjectDoc.class || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: "quiz"
@@ -697,7 +718,7 @@ app.get("/leaderboard", async (req, res) => {
   }
 });
 
-app.listen(4000, () => console.log("🚀 Server running on http://localhost:4000"));
+// Removed duplicate listen (handled at bottom)
 
 // Helper function to get today's date string
 function getTodayDateString() {

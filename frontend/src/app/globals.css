@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* Custom Web Font */
+@font-face {
+	font-family: 'CustomAppFont';
+	src: url('/fonts/KFOmCnqEu92Fr1Mu4mxK.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+html, body {
+	font-family: 'CustomAppFont', system-ui, sans-serif;
+}

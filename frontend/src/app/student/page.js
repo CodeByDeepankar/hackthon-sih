@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
+import { SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/nextjs";
 import LanguageToggle from "@/components/LanguageToggle";
 import OfflineNotice from "@/components/OfflineNotice";
 import { useRouter } from "next/navigation";
 import OnlineBadge from "@/components/OnlineBadge";
 import FooterNav from "@/components/FooterNav";
+import { useStreak } from "@/hooks/useStreak";
+import StreakWidget, { StreakStats } from "@/components/StreakWidget";
 
 const t = {
   en: {
@@ -37,10 +39,22 @@ const t = {
 
 export default function StudentDashboard() {
   const router = useRouter();
+  const { user } = useUser();
   const [language, setLanguage] = useState("en");
   const dict = useMemo(() => t[language] ?? t.en, [language]);
   const [installEvent, setInstallEvent] = useState(null);
   const [isOffline, setIsOffline] = useState(false);
+
+  // Use the streak hook for real-time streak data
+  const {
+    streakData,
+    recordQuizCompletion,
+    simulateQuizCompletion,
+    refreshData,
+    isStreakActive,
+    needsDailyQuiz,
+    streakMessage
+  } = useStreak(user?.id);
 
   useEffect(() => {
     const handler = (e) => {
@@ -72,9 +86,18 @@ export default function StudentDashboard() {
     { key: "lvl1", name: "Level 1 Completed" },
   ];
   const weekly = { thisWeek: 68, lastWeek: 52, timeThisWeekMin: 95 };
-  const streak = 4; // days
   const level = 2;
   const spark = [20, 35, 40, 55, 38, 60, 68];
+
+  // Handler for simulating quiz completion (for testing)
+  const handleTestQuizCompletion = async () => {
+    try {
+      const result = await simulateQuizCompletion();
+      alert(`Quiz completed! Your streak is now ${result.currentStreak} days.`);
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    }
+  };
 
   return (
     <>
@@ -87,13 +110,44 @@ export default function StudentDashboard() {
           <div className="rounded-2xl p-4 text-white bg-gradient-to-r from-green-500 to-blue-500 flex items-center justify-between shadow-sm">
             <div>
               <div className="text-lg font-semibold">Welcome back!</div>
-              <div className="opacity-90 text-sm">Keep up the great work.</div>
+              <div className="opacity-90 text-sm">
+                {streakData.loading ? "Loading..." : streakMessage}
+              </div>
             </div>
             <div className="flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full">
               <span>🔥</span>
-              <span className="font-semibold">{streak} day streak</span>
+              <span className="font-semibold">
+                {streakData.loading ? "..." : `${streakData.currentStreak} day streak`}
+              </span>
             </div>
           </div>
+          
+          {/* Daily Challenge Status */}
+          {!streakData.loading && (
+            <div className="mt-3 p-3 rounded-xl bg-white border shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">
+                    {streakData.completedToday ? "✅ Daily challenge completed!" : "📚 Daily challenge pending"}
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {streakData.completedToday 
+                      ? `${streakData.todayQuizzes} quiz${streakData.todayQuizzes !== 1 ? 'es' : ''} completed today`
+                      : "Complete at least 1 quiz to maintain your streak"
+                    }
+                  </div>
+                </div>
+                {!streakData.completedToday && (
+                  <button
+                    onClick={handleTestQuizCompletion}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-full text-sm hover:bg-blue-700 transition-colors"
+                  >
+                    Test Quiz
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Main content */}
@@ -156,8 +210,14 @@ export default function StudentDashboard() {
             </div>
             <div className="mt-3 flex gap-4 text-sm">
               <div className="px-3 py-1 border rounded-full bg-white">Level: {level}</div>
-              <div className="px-3 py-1 border rounded-full bg-white">🔥 Streak: {streak}d</div>
+              <StreakStats userId={user?.id} />
             </div>
+          </section>
+
+          {/* Daily Streak Tracker */}
+          <section className="bg-white rounded-2xl border p-4 shadow-sm transition-transform duration-200 hover:scale-[1.01]">
+            <h2 className="font-semibold mb-3">🔥 Daily Learning Streak</h2>
+            <StreakWidget userId={user?.id} />
           </section>
 
           {/* My Progress */}
@@ -169,14 +229,38 @@ export default function StudentDashboard() {
                 <div className="text-2xl font-bold">{weekly.thisWeek}%</div>
               </div>
               <div className="border rounded p-3">
-                <div className="text-sm text-gray-600">This week vs last</div>
-                <div className="text-2xl font-bold">+{weekly.thisWeek - weekly.lastWeek}%</div>
+                <div className="text-sm text-gray-600">Current Streak</div>
+                <div className="text-2xl font-bold">
+                  {streakData.loading ? "..." : `${streakData.currentStreak} days`}
+                </div>
               </div>
               <div className="border rounded p-3">
-                <div className="text-sm text-gray-600">Time spent</div>
-                <div className="text-2xl font-bold">{weekly.timeThisWeekMin}m</div>
+                <div className="text-sm text-gray-600">Today&apos;s Quizzes</div>
+                <div className="text-2xl font-bold">
+                  {streakData.loading ? "..." : streakData.todayQuizzes}
+                </div>
               </div>
             </div>
+            
+            {/* Today's Stats */}
+            {!streakData.loading && streakData.todayQuizzes > 0 && (
+              <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                <div className="text-sm font-medium text-green-800 mb-2">Today&apos;s Performance</div>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Time Spent:</span>
+                    <span className="font-medium ml-1">
+                      {Math.floor(streakData.todayTimeSpent / 60)}m {streakData.todayTimeSpent % 60}s
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Avg Score:</span>
+                    <span className="font-medium ml-1">{streakData.todayAverageScore.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {/* Lightweight sparkline chart */}
             <svg className="mt-4 w-full h-16" viewBox="0 0 120 40" preserveAspectRatio="none">
               <polyline

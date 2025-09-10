@@ -1,19 +1,32 @@
 {
-  "name": "backend",
+  "name": "gamified-stem-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Backend server for gamified STEM learning platform",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "nodemon server.js",
+    "dev": "nodemon server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "env-check": "node -e \"require('dotenv').config(); console.log('Environment Check:'); console.log('COUCHDB_URL:', process.env.COUCHDB_URL); console.log('PORT:', process.env.PORT); console.log('NODE_ENV:', process.env.NODE_ENV);\"",
+    "setup-db": "curl -X POST http://localhost:4000/setup-views || echo 'Failed to setup database views'"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "education",
+    "learning",
+    "quiz",
+    "gamification"
+  ],
+  "author": "CodeByDeepankar",
+  "license": "MIT",
   "type": "commonjs",
   "dependencies": {
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "nano": "^10.1.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
   }
 }

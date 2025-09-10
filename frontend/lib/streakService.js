@@ -33,9 +33,13 @@ export class StreakService {
   static async getCurrentStreak(userId) {
     try {
       const response = await fetch(`${API_BASE_URL}/streak/${userId}`);
-      
+
+      // If the backend doesn't have a streak record yet, treat as zero
+      if (response.status === 404) return 0;
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.warn(`Streak API responded with ${response.status}`);
+        return 0;
       }
 
       const data = await response.json();

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StreakService } from '../../lib/streakService';
+import { StreakService } from '@/lib/streakService';
 
 // Custom hook for managing daily streak functionality
 export function useStreak(userId) {

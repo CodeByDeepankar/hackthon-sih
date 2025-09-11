@@ -68,9 +68,29 @@ class ApiClient {
   // SUBJECTS API
   // ===========================================
 
-  async getSubjects(classFilter = null) {
-    const params = classFilter ? `?class=${encodeURIComponent(classFilter)}` : '';
-    return this.request(`/subjects${params}`);
+  async getSubjects(arg = null) {
+    // Backward compatible: string -> class filter; object -> { class, schoolId }
+    let query = '';
+    if (arg) {
+      if (typeof arg === 'string') {
+        query = `?class=${encodeURIComponent(arg)}`;
+      } else if (typeof arg === 'object') {
+        const qs = new URLSearchParams();
+        if (arg.class) qs.append('class', arg.class);
+        if (arg.schoolId) qs.append('schoolId', arg.schoolId);
+        if (qs.toString()) query = `?${qs.toString()}`;
+      }
+    }
+    return this.request(`/subjects${query}`);
+  }
+
+  async getSubjectStats(filters = {}) {
+    const qs = new URLSearchParams();
+    if (filters.class) qs.append('class', filters.class);
+    if (filters.schoolId) qs.append('schoolId', filters.schoolId);
+    if (filters.studentId) qs.append('studentId', filters.studentId);
+    const q = qs.toString();
+    return this.request(`/subjects/stats${q?`?${q}`:''}`);
   }
 
   async createSubject(subjectData) {
@@ -102,6 +122,7 @@ class ApiClient {
     const params = new URLSearchParams();
     if (filters.subjectId) params.append('subjectId', filters.subjectId);
     if (filters.createdBy) params.append('createdBy', filters.createdBy);
+  if (filters.schoolId) params.append('schoolId', filters.schoolId);
     
     const queryString = params.toString();
     return this.request(`/quizzes${queryString ? '?' + queryString : ''}`);

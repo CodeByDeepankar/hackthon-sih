@@ -16,8 +16,12 @@ export default function WelcomeOrRedirect() {
     async function go() {
       if (!user) return; // stay on landing; SignedOut UI will show CTA
       const record = await fetchUserRole(user.id).catch(() => null);
-      if (record?.role === 'student') router.replace('/student');
-      else if (record?.role === 'teacher') router.replace('/teacher');
+      if (!record || record.role === 'unassigned' || record.provisional) {
+        router.replace('/role-select');
+        return;
+      }
+      if (record.role === 'student') router.replace('/student');
+      else if (record.role === 'teacher' || record.role === 'admin') router.replace('/teacher');
       else router.replace('/role-select');
     }
     go();

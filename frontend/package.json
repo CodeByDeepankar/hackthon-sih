@@ -18,7 +18,8 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-icons": "^5.5.0",
-    "sharp": "^0.34.3"
+  "sharp": "^0.34.3",
+  "framer-motion": "^11.11.10"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

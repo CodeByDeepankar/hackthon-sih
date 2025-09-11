@@ -1,26 +1,56 @@
 const express = require("express");
 const cors = require("cors");
+const http = require('http');
 require('dotenv').config();
 
 // Database configuration
 const COUCHDB_URL = process.env.COUCHDB_URL || "http://127.0.0.1:5984";
-const COUCHDB_USERNAME = process.env.COUCHDB_USERNAME || "deep";
-const COUCHDB_PASSWORD = process.env.COUCHDB_PASSWORD || "1234";
+const COUCHDB_USERNAME = process.env.COUCHDB_USERNAME || process.env.COUCHDB_USER || "deep";
+const COUCHDB_PASSWORD = process.env.COUCHDB_PASSWORD || process.env.COUCHDB_PASS || "1234";
 const PORT = process.env.PORT || 4000;
+const AUTO_PROVISION_ROLES = process.env.AUTO_PROVISION_ROLES !== 'false';
 
-// Construct CouchDB connection string
-const couchdbConnectionString = COUCHDB_USERNAME && COUCHDB_PASSWORD 
-  ? `http://${COUCHDB_USERNAME}:${COUCHDB_PASSWORD}@${COUCHDB_URL.replace('http://', '')}`
-  : COUCHDB_URL;
+// Robust CouchDB connection string builder (supports http/https + trailing slash + credential injection)
+function buildCouchConnectionString() {
+  let raw = COUCHDB_URL.trim();
+  // Remove trailing slashes for consistency
+  raw = raw.replace(/\/+$/, '');
+  let urlObj;
+  try {
+    urlObj = new URL(raw);
+  } catch (e) {
+    console.error(`❌ Invalid COUCHDB_URL provided: ${raw}`);
+    throw e;
+  }
+  if (COUCHDB_USERNAME) urlObj.username = COUCHDB_USERNAME;
+  if (COUCHDB_PASSWORD) urlObj.password = COUCHDB_PASSWORD;
+  // Ensure no path component (root of CouchDB)
+  urlObj.pathname = '';
+  // Remove any trailing slash nano dislikes
+  return urlObj.toString().replace(/\/+$/, '');
+}
 
-console.log(`Connecting to CouchDB at: ${COUCHDB_URL}`);
+let couchdbConnectionString;
+try {
+  couchdbConnectionString = buildCouchConnectionString();
+} catch (e) {
+  console.error('Failed constructing CouchDB connection URL:', e.message);
+  process.exit(1);
+}
+
+const sanitizedForLog = couchdbConnectionString.replace(/:\w+@/, ':****@');
+console.log(`Connecting to CouchDB at: ${sanitizedForLog}`);
 
 let nano;
 try {
-  nano = require("nano")(couchdbConnectionString);
+  const nanoFactory = require('nano');
+  nano = nanoFactory(couchdbConnectionString);
+  if (!nano || !nano.db) {
+    throw new Error('Nano client missing .db API (likely malformed URL)');
+  }
 } catch (error) {
-  console.error("Failed to connect to CouchDB:", error.message);
-  console.log("Please ensure CouchDB is running and credentials are correct");
+  console.error("❌ Failed to initialize CouchDB client:", error.message);
+  console.log("Troubleshooting tips:\n 1. Verify CouchDB URL (COUCHDB_URL)\n 2. Remove trailing slash from URL\n 3. Confirm credentials are correct\n 4. If using Railway/Cloud, ensure public access or proper networking");
   process.exit(1);
 }
 
@@ -35,6 +65,11 @@ const questionsDb = nano.db.use("questions");
 const responsesDb = nano.db.use("responses");
 
 const app = express();
+const server = http.createServer(app);
+let wss; // lazily created after server listen
+// Raw body for webhook signature verification
+const bodyParser = require('body-parser');
+app.use('/clerk/webhook', bodyParser.raw({ type: 'application/json' }));
 
 // CORS configuration
 const corsOptions = {
@@ -49,6 +84,37 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// ==============================
+// Simple Server-Sent Events (SSE)
+// ==============================
+const sseClients = new Set();
+const wsClients = new Set();
+app.get('/events', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'Access-Control-Allow-Origin': corsOptions.origin[0]
+  });
+  res.write(`event: ping\ndata: {"t":${Date.now()}}\n\n`);
+  const client = { res };
+  sseClients.add(client);
+  req.on('close', () => sseClients.delete(client));
+});
+
+function broadcast(event, data) {
+  const payload = { event, data, ts: Date.now() };
+  const sseFormatted = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  for (const c of sseClients) {
+    try { c.res.write(sseFormatted); } catch {}
+  }
+  for (const ws of wsClients) {
+    if (ws.readyState === 1) {
+      try { ws.send(JSON.stringify(payload)); } catch {}
+    }
+  }
+}
 
 // Ensure databases exist (best-effort)
 (async () => {
@@ -110,6 +176,70 @@ async function ensureDesignDocs() {
 
 ensureDesignDocs().catch(e=>console.warn('Design doc init error', e.message));
 
+// Clerk user deletion webhook
+// Set CLERK_WEBHOOK_SECRET in .env (from Clerk dashboard) for verification
+app.post('/clerk/webhook', async (req, res) => {
+  const secret = process.env.CLERK_WEBHOOK_SECRET;
+  if (!secret) {
+    console.warn('Missing CLERK_WEBHOOK_SECRET environment variable');
+    return res.status(500).json({ error: 'Server misconfiguration' });
+  }
+  let payloadString = req.body.toString('utf8');
+  const svixId = req.header('svix-id');
+  const svixTimestamp = req.header('svix-timestamp');
+  const svixSignature = req.header('svix-signature');
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    return res.status(400).json({ error: 'Missing Svix headers' });
+  }
+  const { Webhook } = require('svix');
+  const wh = new Webhook(secret);
+  let evt;
+  try {
+    evt = wh.verify(payloadString, {
+      'svix-id': svixId,
+      'svix-timestamp': svixTimestamp,
+      'svix-signature': svixSignature,
+    });
+  } catch (err) {
+    console.error('Webhook verification failed', err.message);
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+  const eventType = evt.type;
+  try {
+    if (eventType === 'user.deleted') {
+      const userId = evt.data.id;
+      // Delete role/user doc
+      try {
+        const userDoc = await usersDb.get(`user:${userId}`);
+        await usersDb.destroy(userDoc._id, userDoc._rev);
+        console.log(`Deleted user role doc for ${userId}`);
+      } catch (e) { if (e.statusCode !== 404) console.warn('User doc delete error', e.message); }
+      // Delete streak doc
+      try {
+        const streakDoc = await streaksDb.get(`streak:${userId}`);
+        await streaksDb.destroy(streakDoc._id, streakDoc._rev);
+      } catch (e) { if (e.statusCode !== 404) console.warn('Streak doc delete error', e.message); }
+      // Delete quiz completions
+      try {
+        const completions = await quizCompletionsDb.list({ include_docs: true });
+        const toDelete = completions.rows.filter(r => r.doc?.userId === userId).map(r => ({ _id: r.doc._id, _rev: r.doc._rev, _deleted: true }));
+        if (toDelete.length) await quizCompletionsDb.bulk({ docs: toDelete });
+      } catch (e) { console.warn('Completion cleanup error', e.message); }
+      // Delete responses
+      try {
+        const responses = await responsesDb.list({ include_docs: true });
+        const toDelete = responses.rows.filter(r => r.doc?.studentId === userId).map(r => ({ _id: r.doc._id, _rev: r.doc._rev, _deleted: true }));
+        if (toDelete.length) await responsesDb.bulk({ docs: toDelete });
+      } catch (e) { console.warn('Responses cleanup error', e.message); }
+      console.log(`✅ Fully cleaned data for deleted user ${userId}`);
+    }
+    res.json({ received: true });
+  } catch (e) {
+    console.error('Webhook processing error', e);
+    res.status(500).json({ error: 'Internal error' });
+  }
+});
+
 // Health check endpoint
 app.get("/health", async (req, res) => {
   try {
@@ -167,7 +297,30 @@ app.get("/users/:userId/role", async (req, res) => {
       updatedAt: doc.updatedAt,
     });
   } catch (err) {
-    if (err.statusCode === 404) return res.status(404).json({ error: "Not Found" });
+    if (err.statusCode === 404) {
+      if (!AUTO_PROVISION_ROLES) return res.status(404).json({ error: "Not Found" });
+      // Auto provision placeholder role requiring onboarding
+      try {
+        const now = new Date().toISOString();
+        const provisional = {
+          _id: docId,
+          userId,
+          role: 'unassigned',
+          provisional: true,
+          name: null,
+          schoolId: null,
+          class: null,
+          createdAt: now,
+          updatedAt: now,
+          type: 'userRole'
+        };
+        await usersDb.insert(provisional);
+        broadcast('user.provisioned', { userId, role: 'unassigned' });
+        return res.status(404).json({ error: 'Not Onboarded', provisional: true });
+      } catch (pErr) {
+        return res.status(500).json({ error: pErr.message });
+      }
+    }
     res.status(500).json({ error: err.message });
   }
 });
@@ -186,7 +339,8 @@ app.post("/users/role", async (req, res) => {
       _id: docId,
       ...(existing ? { _rev: existing._rev } : {}),
       userId,
-      role,
+  role,
+  provisional: false,
       name: name ?? existing?.name ?? null,
       schoolId: schoolId ?? existing?.schoolId ?? null,
       class: typeof klass !== 'undefined' ? klass : (existing?.class ?? null),
@@ -245,25 +399,36 @@ const requireRole = (allowedRoles) => async (req, res, next) => {
 // GET /subjects - List all subjects
 app.get("/subjects", async (req, res) => {
   try {
-    const { class: classFilter } = req.query;
-    
-    const result = await subjectsDb.view('subjects', 'all', {
-      include_docs: true
-    }).catch(() => ({ rows: [] }));
+    const { class: classFilter, schoolId, debug } = req.query;
 
-    let subjects = result.rows.map(row => ({
+    let rows = [];
+    try {
+      const viewResult = await subjectsDb.view('subjects', 'all', { include_docs: true });
+      rows = viewResult.rows;
+    } catch (e) {
+      // Fallback: full scan if design doc/view not ready yet
+      const all = await subjectsDb.list({ include_docs: true }).catch(() => ({ rows: [] }));
+      rows = all.rows.filter(r => r.doc?.type === 'subject');
+    }
+
+    let subjects = rows.map(row => ({
       id: row.doc._id,
       name: row.doc.name,
       class: row.doc.class,
       description: row.doc.description,
       createdBy: row.doc.createdBy,
+      schoolId: row.doc.schoolId || null,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
 
-    // Filter by class if specified
-    if (classFilter) {
-      subjects = subjects.filter(s => s.class === classFilter);
+    if (classFilter) subjects = subjects.filter(s => s.class == classFilter);
+    if (schoolId) {
+      subjects = subjects.filter(s => !s.schoolId || s.schoolId === schoolId);
+    }
+
+    if (debug === 'true') {
+      console.log('[DEBUG /subjects] count=%d classFilter=%s schoolId=%s', subjects.length, classFilter, schoolId);
     }
 
     res.json(subjects);
@@ -295,12 +460,14 @@ app.post("/subjects", async (req, res) => {
       class: subjectClass,
       description: description || "",
       createdBy,
+      schoolId: userDoc.schoolId || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: "subject"
     };
 
-    const response = await subjectsDb.insert(subjectDoc);
+  const response = await subjectsDb.insert(subjectDoc);
+  broadcast('subject.created', { id: response.id, name: subjectDoc.name, class: subjectDoc.class, schoolId: subjectDoc.schoolId, description: subjectDoc.description });
     
     res.json({
       success: true,
@@ -311,6 +478,7 @@ app.post("/subjects", async (req, res) => {
         class: subjectDoc.class,
         description: subjectDoc.description,
         createdBy: subjectDoc.createdBy,
+        schoolId: subjectDoc.schoolId,
         createdAt: subjectDoc.createdAt
       }
     });
@@ -368,6 +536,72 @@ app.delete("/subjects/:id", async (req, res) => {
   }
 });
 
+// GET /subjects/stats - subjects with quizCount, attempts, progress%
+app.get('/subjects/stats', async (req, res) => {
+  try {
+    const { class: classFilter, schoolId, studentId } = req.query;
+    // Reuse subjects logic by calling internal handler (duplicated small portion for clarity)
+    let rows = [];
+    try {
+      const viewResult = await subjectsDb.view('subjects','all',{ include_docs:true });
+      rows = viewResult.rows;
+    } catch {
+      const all = await subjectsDb.list({ include_docs:true }).catch(()=>({ rows:[] }));
+      rows = all.rows.filter(r => r.doc?.type==='subject');
+    }
+    let subjects = rows.map(r => r.doc).filter(Boolean);
+    if (classFilter) subjects = subjects.filter(s => s.class == classFilter);
+    if (schoolId) subjects = subjects.filter(s => !s.schoolId || s.schoolId === schoolId);
+
+    // Quizzes
+    let quizRows = [];
+    try {
+      const qv = await quizzesDb.view('quizzes','all',{ include_docs:true });
+      quizRows = qv.rows;
+    } catch {
+      const allQ = await quizzesDb.list({ include_docs:true }).catch(()=>({ rows:[] }));
+      quizRows = allQ.rows.filter(r => r.doc?.type==='quiz');
+    }
+    let quizzes = quizRows.map(r => r.doc).filter(Boolean);
+    if (schoolId) quizzes = quizzes.filter(q => !q.schoolId || q.schoolId === schoolId);
+    const quizCountBySubject = quizzes.reduce((acc,q)=>{ acc[q.subjectId]=(acc[q.subjectId]||0)+1; return acc; },{});
+
+    // Attempts by student (optional)
+    let attemptsBySubject = {};
+    if (studentId) {
+      let responseRows = [];
+      try {
+        const rv = await responsesDb.view('responses','by_student',{ key: studentId, include_docs:true });
+        responseRows = rv.rows;
+      } catch {}
+      const responses = responseRows.map(r => r.doc).filter(Boolean);
+      const quizLookup = quizzes.reduce((m,q)=>{ m[q._id]=q; return m;},{});
+      for (const resp of responses) {
+        const q = quizLookup[resp.quizId];
+        if (q) attemptsBySubject[q.subjectId]=(attemptsBySubject[q.subjectId]||0)+1;
+      }
+    }
+    const enriched = subjects.map(s => {
+      const total = quizCountBySubject[s._id]||0;
+      const attempted = attemptsBySubject[s._id]||0;
+      const progress = total>0? Math.round((attempted/total)*100) : 0;
+      return {
+        id: s._id,
+        name: s.name,
+        class: s.class,
+        schoolId: s.schoolId||null,
+        description: s.description||'',
+        quizCount: total,
+        attempted,
+        progress
+      };
+    });
+    res.json({ count: enriched.length, subjects: enriched });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ===========================================
 // QUIZZES API ENDPOINTS
 // ===========================================
@@ -375,7 +609,7 @@ app.delete("/subjects/:id", async (req, res) => {
 // GET /quizzes - List quizzes (with optional subject filter); fallback if view missing
 app.get("/quizzes", async (req, res) => {
   try {
-    const { subjectId, createdBy } = req.query;
+    const { subjectId, createdBy, schoolId } = req.query;
     let rows = [];
     try {
       const result = await quizzesDb.view('quizzes', 'all', { include_docs: true });
@@ -393,11 +627,13 @@ app.get("/quizzes", async (req, res) => {
       difficulty: row.doc.difficulty,
       timeLimit: row.doc.timeLimit,
       createdBy: row.doc.createdBy,
+      schoolId: row.doc.schoolId || null,
       createdAt: row.doc.createdAt,
       updatedAt: row.doc.updatedAt
     }));
     if (subjectId) quizzes = quizzes.filter(q => q.subjectId === subjectId);
     if (createdBy) quizzes = quizzes.filter(q => q.createdBy === createdBy);
+    if (schoolId) quizzes = quizzes.filter(q => q.schoolId === schoolId);
     res.json(quizzes);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -453,12 +689,14 @@ app.post("/quizzes", async (req, res) => {
       difficulty,
       timeLimit,
       createdBy,
+      schoolId: userDoc.schoolId || null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       type: "quiz"
     };
 
     const response = await quizzesDb.insert(quizDoc);
+  broadcast('quiz.created', { id: response.id, subjectId: quizDoc.subjectId, schoolId: quizDoc.schoolId });
 
     // Add questions if provided
     const questionDocs = [];
@@ -635,6 +873,8 @@ app.post("/responses", async (req, res) => {
       results: detailedResults,
       message: `Quiz completed! You scored ${Math.round(scorePercentage)}%`
     });
+  // Broadcast quiz attempt event (without leaking answers)
+  broadcast('quiz.attempted', { quizId, studentId, score: scorePercentage, correctAnswers, totalQuestions, submittedAt: responseDoc.submittedAt });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1273,9 +1513,25 @@ app.post("/setup-views", async (req, res) => {
 });
 
 // Start the server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check available at http://localhost:${PORT}/health`);
   console.log(`🗄️  CouchDB URL: ${COUCHDB_URL}`);
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  // Init WebSocket server after HTTP server is listening
+  const { WebSocketServer } = require('ws');
+  wss = new WebSocketServer({ server, path: '/ws' });
+  wss.on('connection', (socket) => {
+    wsClients.add(socket);
+    socket.send(JSON.stringify({ event: 'connected', data: { message: 'ws connection established' }, ts: Date.now() }));
+    socket.on('message', (msg) => {
+      // Optional ping/pong or future client messages
+      try {
+        const parsed = JSON.parse(msg.toString());
+        if (parsed.type === 'ping') socket.send(JSON.stringify({ event: 'pong', data: {}, ts: Date.now() }));
+      } catch {}
+    });
+    socket.on('close', () => wsClients.delete(socket));
+  });
+  console.log('🔌 WebSocket endpoint available at /ws');
 });

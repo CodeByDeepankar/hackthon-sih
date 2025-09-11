@@ -3,15 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Offline - Gamified Learning Platform</title>
+  <title>Offline - Gamified STEM Learning</title>
   <style>
-    body {font-family: system-ui, sans-serif; padding:2rem; background:#0f172a; color:#f1f5f9;}
-    h1 {font-size:1.5rem; margin-bottom:1rem;}
-    p {opacity:0.85;}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white; min-height: 100vh; padding: 1rem;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .container { max-width: 500px; text-align: center; }
+    .logo { width: 64px; height: 64px; background: white; border-radius: 50%; margin: 0 auto 2rem; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #667eea; }
+    h1 { font-size: 2rem; margin-bottom: 1rem; }
+    p { opacity: 0.9; margin-bottom: 1.5rem; line-height: 1.6; }
+    .status { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
+    .retry-btn { background: white; color: #667eea; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .retry-btn:hover { background: #f8f9fa; }
+    .footer { position: absolute; bottom: 1rem; text-align: center; opacity: 0.7; font-size: 0.9rem; }
   </style>
 </head>
 <body>
-  <h1>You're Offline</h1>
-  <p>You can continue reviewing any content you've already opened. Reconnect to sync progress.</p>
+  <div class="container">
+    <div class="logo">📚</div>
+    <h1>Gamified STEM Learning</h1>
+    <div class="status">
+      <p id="status">Checking connection...</p>
+    </div>
+    <p>You can continue reviewing any content you've already opened. Your progress will sync when you reconnect.</p>
+    <button class="retry-btn" onclick="location.reload()">Try Again</button>
+  </div>
+  <div class="footer">
+    © 2025 Gamified STEM Learning. All rights reserved.
+  </div>
+  
+  <script>
+    // Check connection periodically
+    function checkConnection() {
+      const status = document.getElementById('status');
+      if (navigator.onLine) {
+        status.textContent = 'Connection restored! Reloading...';
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        status.textContent = 'No internet connection detected.';
+      }
+    }
+    
+    // Initial check and periodic updates
+    checkConnection();
+    setInterval(checkConnection, 5000);
+    
+    // Listen for online/offline events
+    window.addEventListener('online', checkConnection);
+    window.addEventListener('offline', checkConnection);
+    
+    // Suppress console errors for missing chunks/assets during offline
+    window.addEventListener('error', function(e) {
+      if (e.message && (e.message.includes('net::ERR_CONNECTION_REFUSED') || e.message.includes('Loading chunk'))) {
+        e.preventDefault();
+        console.log('Suppressed offline asset error:', e.filename);
+      }
+    });
+    
+    // Suppress unhandled promise rejections for fetch failures
+    window.addEventListener('unhandledrejection', function(e) {
+      if (e.reason && e.reason.message && e.reason.message.includes('fetch')) {
+        e.preventDefault();
+        console.log('Suppressed offline fetch error');
+      }
+    });
+  </script>
 </body>
 </html>

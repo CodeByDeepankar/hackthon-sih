@@ -4,11 +4,44 @@ import { useEffect } from 'react';
 export default function ServiceWorkerRegister() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
-  if (process.env.NODE_ENV !== 'production') return; // avoid SW in dev to prevent stale chunk errors
-  if ('serviceWorker' in navigator) {
+    
+    // Handle chunk load errors gracefully
+    window.addEventListener('error', (event) => {
+      if (event.message && event.message.includes('Loading chunk')) {
+        console.warn('Chunk load error detected, attempting recovery');
+        // Give user option to reload
+        if (confirm('A resource failed to load. Would you like to refresh the page?')) {
+          window.location.reload();
+        }
+        event.preventDefault();
+      }
+    });
+    
+    // Handle unhandled promise rejections from dynamic imports
+    window.addEventListener('unhandledrejection', (event) => {
+      if (event.reason && event.reason.message && event.reason.message.includes('Loading chunk')) {
+        console.warn('Dynamic import error:', event.reason);
+        event.preventDefault();
+      }
+    });
+    
+    if ('serviceWorker' in navigator) {
       const register = () => {
         navigator.serviceWorker
           .register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered:', registration.scope);
+            
+            // Listen for service worker updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('New SW version available');
+                }
+              });
+            });
+          })
           .catch((err) => console.error('SW registration failed', err));
       };
       if (document.readyState === 'complete') register();

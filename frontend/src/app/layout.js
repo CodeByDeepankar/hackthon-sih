@@ -6,6 +6,7 @@ import ConnectionStatus from '@/components/ConnectionStatus';
 import './globals.css'; // your global styles
 import ThemeProvider from '@/components/ThemeProvider';
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister';
+import { ToastProvider } from '@/components/ToastHub';
 
 export const metadata = {
   title: 'Gamified Learning Platform',
@@ -22,11 +23,13 @@ export default function RootLayout({ children }) {
       <body>
         <ClerkProvider>
           <ThemeProvider>
-            <ServiceWorkerRegister />
-            <ConnectionStatus />
-            <Header />
-            <main>{children}</main>
-            <Footer />
+            <ToastProvider>
+              <ServiceWorkerRegister />
+              <ConnectionStatus />
+              <Header />
+              <main>{children}</main>
+              <Footer />
+            </ToastProvider>
           </ThemeProvider>
         </ClerkProvider>
       </body>

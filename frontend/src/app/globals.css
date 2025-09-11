@@ -12,3 +12,29 @@
 html, body {
 	font-family: 'CustomAppFont', system-ui, sans-serif;
 }
+
+/* Blinking caret for typewriter effect */
+@keyframes blink {
+	0%, 50% { opacity: 1; }
+	51%, 100% { opacity: 0; }
+}
+.animate-blink {
+	animation: blink 1s step-start infinite;
+}
+
+/* Hide scrollbars visually but keep scrolling functional
+	 - Firefox: scrollbar-width: none
+	 - IE/Edge: -ms-overflow-style: none
+	 - WebKit (Chrome, Safari): hide via ::-webkit-scrollbar
+	 Applied globally so both axes hide the scrollbar. */
+html, body, * {
+	-ms-overflow-style: none; /* IE and Edge */
+	scrollbar-width: none; /* Firefox */
+}
+
+/* WebKit browsers */
+html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
+	width: 0px;
+	height: 0px;
+	background: transparent;
+}

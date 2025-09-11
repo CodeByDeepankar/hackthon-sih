@@ -1,6 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const http = require('http');
+// Initialize express early so route registrations above later code are safe
+const app = express();
+const server = http.createServer(app);
+let wss; // lazily created after server listen
 require('dotenv').config();
 
 // Database configuration
@@ -54,19 +58,63 @@ try {
   process.exit(1);
 }
 
-// Database connections
-const db = nano.db.use("students");
-const usersDb = nano.db.use("users");
-const streaksDb = nano.db.use("streaks");
-const quizCompletionsDb = nano.db.use("quiz_completions");
-const subjectsDb = nano.db.use("subjects");
-const quizzesDb = nano.db.use("quizzes");
-const questionsDb = nano.db.use("questions");
-const responsesDb = nano.db.use("responses");
+// ---------- CouchDB Diagnostics Helpers ----------
+async function lowLevelHttpCheck() {
+  const results = {};
+  try {
+    const rootRes = await fetch(couchdbConnectionString + '/', { method: 'GET' });
+    results.root = {
+      status: rootRes.status,
+      ok: rootRes.ok,
+      headers: Object.fromEntries([...rootRes.headers].slice(0, 10)),
+      bodySnippet: (await rootRes.text()).slice(0, 200)
+    };
+  } catch (e) {
+    results.root = { error: e.message };
+  }
+  try {
+    const allDbsRes = await fetch(couchdbConnectionString + '/_all_dbs', { method: 'GET' });
+    let body; try { body = await allDbsRes.text(); } catch { body = ''; }
+    results.all_dbs = {
+      status: allDbsRes.status,
+      ok: allDbsRes.ok,
+      bodySnippet: body.slice(0, 200)
+    };
+  } catch (e) {
+    results.all_dbs = { error: e.message };
+  }
+  return results;
+}
 
-const app = express();
-const server = http.createServer(app);
-let wss; // lazily created after server listen
+app.get('/diagnostics/couch', async (req, res) => {
+  const diag = { connectionString: sanitizedForLog, env: { COUCHDB_URL: COUCHDB_URL, COUCHDB_USERNAME: COUCHDB_USERNAME ? '[set]' : '[empty]' }, timestamp: new Date().toISOString() };
+  try {
+    const dbs = await nano.db.list();
+    diag.nano = { ok: true, dbCount: dbs.length, sample: dbs.slice(0, 10) };
+  } catch (e) {
+    diag.nano = { ok: false, error: e.message };
+  }
+  diag.rawHttp = await lowLevelHttpCheck();
+  res.json(diag);
+});
+
+// Database connections (lazy ensure)
+function bindDb(name) {
+  try {
+    return nano.db.use(name);
+  } catch (e) {
+    console.warn(`⚠️  Could not bind database '${name}': ${e.message}`);
+    return null;
+  }
+}
+let db = bindDb('students');
+let usersDb = bindDb('users');
+let streaksDb = bindDb('streaks');
+let quizCompletionsDb = bindDb('quiz_completions');
+let subjectsDb = bindDb('subjects');
+let quizzesDb = bindDb('quizzes');
+let questionsDb = bindDb('questions');
+let responsesDb = bindDb('responses');
 // Raw body for webhook signature verification
 const bodyParser = require('body-parser');
 app.use('/clerk/webhook', bodyParser.raw({ type: 'application/json' }));
@@ -117,43 +165,45 @@ function broadcast(event, data) {
 }
 
 // Ensure databases exist (best-effort)
-(async () => {
+async function ensureDatabases() {
+  console.log('Checking CouchDB connection...');
+  let existing = [];
   try {
-    console.log("Checking CouchDB connection...");
-    
-    // Test connection
-    await nano.db.list();
-    console.log("✅ CouchDB connection successful");
-    
-    const dbs = await nano.db.list();
-    const requiredDbs = [
-      "students", "users", "streaks", "quiz_completions", 
-      "subjects", "quizzes", "questions", "responses"
-    ];
-    
-    for (const dbName of requiredDbs) {
-      if (!dbs.includes(dbName)) {
-        await nano.db.create(dbName);
-        console.log(`✅ Created database: ${dbName}`);
-      } else {
-        console.log(`✅ Database exists: ${dbName}`);
-      }
-    }
-    
-    console.log("🎉 All databases are ready!");
+    existing = await nano.db.list();
   } catch (e) {
-    console.error("❌ Database initialization failed:", e.message);
-    console.log("Please check:");
-    console.log("1. CouchDB is running");
-    console.log("2. Credentials are correct");
-    console.log("3. Connection URL is accessible");
-    
-    // Don't exit in development, but log the warning
-    if (process.env.NODE_ENV === 'production') {
-      process.exit(1);
+    console.error('❌ Failed listing databases:', e.message);
+    return;
+  }
+  const required = [
+    'students','users','streaks','quiz_completions',
+    'subjects','quizzes','questions','responses'
+  ];
+  for (const name of required) {
+    if (existing.includes(name)) {
+      console.log(`✅ DB present: ${name}`);
+      continue;
+    }
+    try {
+      await nano.db.create(name);
+      console.log(`✅ Created DB: ${name}`);
+    } catch (e) {
+      // Remote hosted Couch (Railway / Cloudant) may block creation without admin perms
+      console.warn(`⚠️  Could not create DB '${name}': ${e.message}`);
     }
   }
-})();
+}
+
+ensureDatabases().then(()=>{
+  // Re-bind in case some were just created
+  db = bindDb('students');
+  usersDb = bindDb('users');
+  streaksDb = bindDb('streaks');
+  quizCompletionsDb = bindDb('quiz_completions');
+  subjectsDb = bindDb('subjects');
+  quizzesDb = bindDb('quizzes');
+  questionsDb = bindDb('questions');
+  responsesDb = bindDb('responses');
+}).catch(e=>console.warn('DB ensure error', e.message));
 
 // Utility: ensure design documents exist (auto instead of manual /setup-views requirement)
 async function ensureDesignDocs() {
@@ -263,6 +313,7 @@ app.get("/health", async (req, res) => {
 
 // Add student progress
 app.post("/progress", async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'students DB not available' });
   try {
     const response = await db.insert(req.body);
     res.json(response);
@@ -273,6 +324,7 @@ app.post("/progress", async (req, res) => {
 
 // Fetch all progress
 app.get("/progress", async (req, res) => {
+  if (!db) return res.status(503).json({ error: 'students DB not available' });
   try {
     const docs = await db.list({ include_docs: true });
     res.json(docs.rows.map(r => r.doc));

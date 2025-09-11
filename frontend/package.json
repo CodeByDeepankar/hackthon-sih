@@ -6,8 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint",
-    "pwa:icons": "node scripts/real-generate-icons.js"
+    "lint": "eslint"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.9",
@@ -17,9 +16,7 @@
     "pouchdb-browser": "^7.3.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-icons": "^5.5.0",
-  "sharp": "^0.34.3",
-  "framer-motion": "^11.11.10"
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

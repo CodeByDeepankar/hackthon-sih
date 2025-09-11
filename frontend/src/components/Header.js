@@ -32,7 +32,7 @@ export default function Header() {
             <div className="w-8 h-8 rounded bg-white text-blue-600 flex items-center justify-center text-xs font-bold">SL</div>
           );
         })()}
-        <h1 className="text-xl font-bold">Gamified STEM Learning</h1>
+        <h1 className="text-xl font-bold">GYANARATNA</h1>
       </div>
       <nav>
         {isWelcome ? (

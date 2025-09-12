@@ -1,5 +1,8 @@
 "use client";
+import { SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
+import DashboardV2 from "@/student/pages/DashboardV2";
 
+<<<<<<< HEAD
 import { useEffect, useMemo, useRef, useState } from "react";
 import { SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/nextjs";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -278,6 +281,13 @@ export default function StudentDashboard() {
   {/* Footer / Nav */}
   <FooterNav />
   <div className="h-14" aria-hidden />
+=======
+export default function Page() {
+  return (
+    <>
+      <SignedIn>
+        <DashboardV2 />
+>>>>>>> Swastik-purohit-coder-frontend-design
       </SignedIn>
       <SignedOut>
         <RedirectToSignIn />

@@ -9,10 +9,10 @@ require('dotenv').config();
 
 // Database configuration
 const COUCHDB_URL = process.env.COUCHDB_URL || "http://127.0.0.1:5984";
-const COUCHDB_USERNAME = process.env.COUCHDB_USERNAME || process.env.COUCHDB_USER || "deep";
-const COUCHDB_PASSWORD = process.env.COUCHDB_PASSWORD || process.env.COUCHDB_PASS || "1234";
+const COUCHDB_USERNAME = process.env.COUCHDB_USERNAME || "deep";
+const COUCHDB_PASSWORD = process.env.COUCHDB_PASSWORD || "1234";
 const PORT = process.env.PORT || 4000;
-const AUTO_PROVISION_ROLES = process.env.AUTO_PROVISION_ROLES !== 'false';
+const AUTO_PROVISION_ROLES = true;
 
 // Robust CouchDB connection string builder (supports http/https + trailing slash + credential injection)
 function buildCouchConnectionString() {
@@ -1586,4 +1586,74 @@ server.listen(PORT, () => {
     socket.on('close', () => wsClients.delete(socket));
   });
   console.log('🔌 WebSocket endpoint available at /ws');
+});
+
+// ==============================
+// AI STUDY BUDDY (Gemini) API
+// ==============================
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_MODEL = 'gemini-1.5-flash';
+const aiRate = new Map();
+function aiRateGuard(req,res,next){
+  const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const now = Date.now();
+  const rec = aiRate.get(ip) || { count:0, start: now };
+  if (now - rec.start > 60000){ rec.count = 0; rec.start = now; }
+  rec.count++; aiRate.set(ip, rec);
+  if (rec.count > 30) return res.status(429).json({ error: 'Too many AI requests, slow down.' });
+  next();
+}
+
+async function callGemini(prompt, history=[]) {
+  if (!GEMINI_API_KEY) throw new Error('Gemini API key not configured');
+  const contents = [
+    ...history.slice(-8).map(m => ({ role: m.role === 'user' ? 'user':'model', parts:[{ text: m.content.slice(0,4000) }] })),
+    { role:'user', parts:[{ text: prompt.slice(0,8000) }] }
+  ];
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ contents, generationConfig:{ temperature:0.7, topK:40, topP:0.95, maxOutputTokens:512 } })
+  });
+  if (!response.ok){
+    const t = await response.text();
+    throw new Error(`Gemini error ${response.status}: ${t.slice(0,200)}`);
+  }
+  const data = await response.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || 'No answer generated.';
+}
+
+app.post('/ai/study-buddy', aiRateGuard, async (req,res) => {
+  try {
+    const { question, mode='answer', history=[] } = req.body || {};
+    if (!question || !question.trim()) {
+      return res.status(400).json({ error:'Please enter a question.' });
+    }
+    // Light normalization (allow very short queries, but encourage detail)
+    if (question.trim().length < 3) {
+      return res.status(400).json({ error:'Add a little more detail so I can help (min 3 characters).' });
+    }
+
+    console.log(`[AI] mode=${mode} len=${question.length} sample="${question.slice(0,40).replace(/\n/g,' ')}`);
+
+    const prefixMap = {
+      answer: 'You are a concise STEM tutor. Provide a direct answer first, then a short explanation.',
+      explain: 'You are a patient STEM instructor. Explain the concept step-by-step with a simple analogy.',
+      practice: 'You are a STEM coach. Provide the solution then 2 follow-up practice questions (hide answers after a label like Answer: ).'
+    };
+    const system = prefixMap[mode] || prefixMap.answer;
+    const fullPrompt = `${system}\n\nStudent question: ${question}`;
+    const answer = await callGemini(fullPrompt, history);
+    res.json({ answer, mode });
+  } catch (e) {
+    console.error('AI error', e);
+    const msg = e.message || 'Unknown AI error';
+    if (/Gemini error/i.test(msg)) {
+      return res.status(502).json({ error: msg });
+    }
+    if (/not configured/i.test(msg)) {
+      return res.status(503).json({ error: 'AI service not configured' });
+    }
+    res.status(500).json({ error: msg });
+  }
 });

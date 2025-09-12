@@ -1,14 +1,26 @@
 @import "tailwindcss";
 @font-face {
 	font-family: 'CustomAppFont';
-	src: url('/fonts/KFOmCnqEu92Fr1Mu4mxK.woff2') format('woff2');
+	src: url('/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2') format('woff2'); /* Regular */
 	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+@font-face {
+	font-family: 'CustomAppFont';
+	src: url('/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2') format('woff2'); /* Bold */
+	font-weight: 700;
 	font-style: normal;
 	font-display: swap;
 }
 
 html, body {
-	font-family: 'CustomAppFont', system-ui, sans-serif;
+	font-family: 'CustomAppFont', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Ensure Tailwind’s default font uses our custom font globally */
+:root, :host {
+	--font-sans: 'CustomAppFont', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, 'Helvetica Neue', Arial, 'Noto Sans', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
 /* Blinking caret for typewriter effect */
@@ -36,3 +48,24 @@ html::-webkit-scrollbar, body::-webkit-scrollbar, *::-webkit-scrollbar {
 	height: 0px;
 	background: transparent;
 }
+
+/* Dark mode hardening: if text becomes white, ensure base backgrounds go dark */
+.dark body {
+	background-color: #0b0b0f !important;
+	color: #f4f4f5 !important;
+}
+.dark .bg-white { background-color: #0f1115 !important; }
+.dark .bg-gray-50 { background-color: #0f1115 !important; }
+.dark .bg-gray-100 { background-color: #12141a !important; }
+.dark .bg-slate-50 { background-color: #0f1115 !important; }
+.dark .bg-slate-100 { background-color: #12141a !important; }
+.dark .text-black { color: #f8fafc !important; }
+.dark .text-gray-900 { color: #f8fafc !important; }
+.dark .border-gray-200 { border-color: #1f2430 !important; }
+
+/* Light mode explicit overrides (we also add a 'light' class to <html>) */
+.light body { color: #000000 !important; }
+.light .text-gray-900, .light .text-black { color: #000000 !important; }
+.light input, .light textarea, .light select { color: #000000 !important; }
+.light input::placeholder, .light textarea::placeholder { color: #000000cc !important; }
+.light .border-gray-200 { border-color: #bfeebf !important; }

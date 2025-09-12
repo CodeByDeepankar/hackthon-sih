@@ -24,19 +24,25 @@ class ApiClient {
       const response = await fetch(url, config);
       
       if (!response.ok) {
-        // Handle specific HTTP errors
+        let detail = '';
+        try {
+          const data = await response.json();
+            detail = data.error || data.message || JSON.stringify(data).slice(0,200);
+        } catch {
+          try { detail = (await response.text()).slice(0,200); } catch {}
+        }
         if (response.status === 503) {
-          throw new Error('Database connection failed. Please check if CouchDB is running.');
+          throw new Error('Service unavailable: ' + detail);
         }
         if (response.status >= 500) {
-          throw new Error('Server error. Please try again later.');
+          throw new Error('Server error: ' + detail);
         }
         if (response.status === 404) {
-          throw new Error('Resource not found.');
+          throw new Error('Not found: ' + detail);
         }
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${detail}`);
       }
-      
+
       return await response.json();
     } catch (error) {
       console.error(`API request failed: ${endpoint}`, error);
@@ -177,6 +183,21 @@ class ApiClient {
   }
 
   // ===========================================
+  // AI STUDY BUDDY
+  // ===========================================
+  async askStudyBuddy({ question, mode = 'answer', history = [] }) {
+    try {
+      return await this.request('/ai/study-buddy', {
+        method: 'POST',
+        body: { question, mode, history }
+      });
+    } catch (e) {
+      console.error('askStudyBuddy failed', e);
+      throw e;
+    }
+  }
+
+  // ===========================================
   // USER MANAGEMENT API
   // ===========================================
 
@@ -223,26 +244,25 @@ const apiClient = new ApiClient();
 
 export default apiClient;
 
-// Named exports for convenience
-export const {
-  getSubjects,
-  createSubject,
-  updateSubject,
-  deleteSubject,
-  getQuizzes,
-  getQuiz,
-  createQuiz,
-  submitQuizResponse,
-  getStudentResponses,
-  getStreak,
-  getDailyActivity,
-  getQuizHistory,
-  recordQuizCompletion,
-  getLeaderboard,
-  getUserRole,
-  setUserRole,
-  setupViews,
-  getStudentsBySchool,
-  getStudentProgress,
-  getSchoolProgress,
-} = apiClient;
+// Named exports (bind methods so 'this' is preserved if destructured)
+export const getSubjects = apiClient.getSubjects.bind(apiClient);
+export const createSubject = apiClient.createSubject.bind(apiClient);
+export const updateSubject = apiClient.updateSubject.bind(apiClient);
+export const deleteSubject = apiClient.deleteSubject.bind(apiClient);
+export const getQuizzes = apiClient.getQuizzes.bind(apiClient);
+export const getQuiz = apiClient.getQuiz.bind(apiClient);
+export const createQuiz = apiClient.createQuiz.bind(apiClient);
+export const submitQuizResponse = apiClient.submitQuizResponse.bind(apiClient);
+export const getStudentResponses = apiClient.getStudentResponses.bind(apiClient);
+export const getStreak = apiClient.getStreak.bind(apiClient);
+export const getDailyActivity = apiClient.getDailyActivity.bind(apiClient);
+export const getQuizHistory = apiClient.getQuizHistory.bind(apiClient);
+export const recordQuizCompletion = apiClient.recordQuizCompletion.bind(apiClient);
+export const getLeaderboard = apiClient.getLeaderboard.bind(apiClient);
+export const askStudyBuddy = apiClient.askStudyBuddy.bind(apiClient);
+export const getUserRole = apiClient.getUserRole.bind(apiClient);
+export const setUserRole = apiClient.setUserRole.bind(apiClient);
+export const setupViews = apiClient.setupViews.bind(apiClient);
+export const getStudentsBySchool = apiClient.getStudentsBySchool.bind(apiClient);
+export const getStudentProgress = apiClient.getStudentProgress.bind(apiClient);
+export const getSchoolProgress = apiClient.getSchoolProgress.bind(apiClient);

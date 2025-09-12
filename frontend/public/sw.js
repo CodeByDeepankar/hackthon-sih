@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /* PWA Service Worker
   - Avoids caching Next.js dynamic dev chunks (/_next/*) that caused chunk load errors
   - Network-first for navigation & API; cache-first for immutable hashed assets
@@ -297,4 +295,3 @@ self.addEventListener('message', (event) => {
     );
   }
 });
->>>>>>> Swastik-purohit-coder-frontend-design

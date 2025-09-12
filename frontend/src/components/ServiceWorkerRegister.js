@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 "use client";
 import { useEffect } from 'react';
 
@@ -68,4 +66,3 @@ export default function ServiceWorkerRegister() {
   }, []);
   return null;
 }
->>>>>>> Swastik-purohit-coder-frontend-design

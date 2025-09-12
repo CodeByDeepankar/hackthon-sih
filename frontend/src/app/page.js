@@ -42,24 +42,8 @@ const wordChild = {
 
 export default function Welcome() {
   const router = useRouter();
-<<<<<<< HEAD
-  const { user, isLoaded } = useUser();
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    async function go() {
-      if (!user) return; // stay on landing; SignedOut UI will show CTA
-      const record = await fetchUserRole(user.id).catch(() => null);
-      if (record?.role === 'student') router.replace('/student');
-      else if (record?.role === 'teacher') router.replace('/teacher');
-      else router.replace('/role-select');
-    }
-    go();
-  }, [isLoaded, user, router]);
-=======
-  const { isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [redirecting, setRedirecting] = useState(false);
->>>>>>> Swastik-purohit-coder-frontend-design
 
   // Preload the GIF so it appears instantly when the MP4 ends
   useEffect(() => {
@@ -93,25 +77,27 @@ export default function Welcome() {
     }
   }, [showGif]);
 
-  // If signed in and role is student, redirect to /student
+  // If signed in, redirect based on role
   useEffect(() => {
-    let active = true;
-    async function checkRoleAndRedirect() {
+    if (!isLoaded || !isSignedIn || !user?.id) return;
+    let cancelled = false;
+    (async () => {
       try {
-        if (!isSignedIn || !user?.id) return;
-        const data = await fetchUserRole(user.id);
+        const data = await fetchUserRole(user.id).catch(() => null);
         const role = typeof data === 'string' ? data : data?.role;
-        if (role === 'student' && active) {
-          setRedirecting(true);
-          router.replace('/student');
-        }
+        if (!role || cancelled) return;
+        setRedirecting(true);
+        if (role === 'student') router.replace('/student');
+        else if (role === 'teacher') router.replace('/teacher');
+        else router.replace('/role-select');
       } catch (_) {
         // ignore role fetch errors on home
       }
-    }
-    checkRoleAndRedirect();
-    return () => { active = false; };
-  }, [isSignedIn, user?.id, router]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, router]);
 
   return (
     <>
@@ -219,6 +205,7 @@ export default function Welcome() {
                   height={720}
                   className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
                   priority
+                  unoptimized
                 />
               )}
             </div>

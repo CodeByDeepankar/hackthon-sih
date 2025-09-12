@@ -1,11 +1,12 @@
 "use client";
 import Script from "next/script";
+import Image from "next/image";
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { SignedOut, SignedIn, SignInButton, UserButton, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { fetchUserRole } from '@/lib/users';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const headingVariants = {
   hidden: { opacity: 0, y: 18, scale: 0.98 },
@@ -39,25 +40,10 @@ const wordChild = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } }
 };
 
-export default function WelcomeOrRedirect() {
+export default function Welcome() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    async function go() {
-      if (!user) return; // stay on landing; SignedOut UI will show CTA
-      const record = await fetchUserRole(user.id).catch(() => null);
-      if (!record || record.role === 'unassigned' || record.provisional) {
-        router.replace('/role-select');
-        return;
-      }
-      if (record.role === 'student') router.replace('/student');
-      else if (record.role === 'teacher' || record.role === 'admin') router.replace('/teacher');
-      else router.replace('/role-select');
-    }
-    go();
-  }, [isLoaded, user, router]);
+  const { isSignedIn, user } = useUser();
+  const [redirecting, setRedirecting] = useState(false);
 
   // Preload the GIF so it appears instantly when the MP4 ends
   useEffect(() => {
@@ -90,6 +76,26 @@ export default function WelcomeOrRedirect() {
       });
     }
   }, [showGif]);
+
+  // If signed in and role is student, redirect to /student
+  useEffect(() => {
+    let active = true;
+    async function checkRoleAndRedirect() {
+      try {
+        if (!isSignedIn || !user?.id) return;
+        const data = await fetchUserRole(user.id);
+        const role = typeof data === 'string' ? data : data?.role;
+        if (role === 'student' && active) {
+          setRedirecting(true);
+          router.replace('/student');
+        }
+      } catch (_) {
+        // ignore role fetch errors on home
+      }
+    }
+    checkRoleAndRedirect();
+    return () => { active = false; };
+  }, [isSignedIn, user?.id, router]);
 
   return (
     <>
@@ -165,9 +171,12 @@ export default function WelcomeOrRedirect() {
             </SignedOut>
 
             <SignedIn>
-              <p className="text-slate-600">Checking your role...</p>
               <div className="mt-4">
-                <UserButton />
+                {redirecting ? (
+                  <div className="text-sm text-slate-600">Redirecting to your dashboard…</div>
+                ) : (
+                  <UserButton />
+                )}
               </div>
             </SignedIn>
           </div>
@@ -187,10 +196,13 @@ export default function WelcomeOrRedirect() {
                   className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
                 />
               ) : (
-                <img
+                <Image
                   src="/home.gif"
                   alt="Home animation"
+                  width={1280}
+                  height={720}
                   className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
+                  priority
                 />
               )}
             </div>

@@ -2,16 +2,18 @@
   - Avoids caching Next.js dynamic dev chunks (/_next/*) that caused chunk load errors
   - Network-first for navigation & API; cache-first for immutable hashed assets
 */
-const VERSION = 'v7';
+const VERSION = 'v8';
 const APP_SHELL_CACHE = `glp-shell-${VERSION}`;
 const STATIC_CACHE = `glp-static-${VERSION}`;
 const DATA_CACHE = `glp-data-${VERSION}`;
-const CORE_ASSETS = [ 
-  '/', 
-  '/manifest.json', 
-  '/logo.png', 
+const CORE_ASSETS = [
+  '/',
+  '/manifest.json',
+  '/logo.png',
   '/offline.html',
-  '/favicon.ico'
+  '/favicon.ico',
+  // Fonts commonly used by the app
+  '/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2'
 ];
 
 // IndexedDB helpers for storing JSON payloads (subjects, quizzes, streak etc.)
@@ -60,6 +62,9 @@ self.addEventListener('install', (event) => {
       // Pre-cache key app routes for better offline experience
       try {
         await cache.add('/student');
+        await cache.add('/student/challenges');
+        await cache.add('/student/achievements');
+        await cache.add('/student/courses');
         await cache.add('/teacher');
         await cache.add('/subjects');
         console.log('[SW] Pre-cached app routes');
@@ -265,7 +270,28 @@ self.addEventListener('fetch', (event) => {
 
 // Client message handler (optional future enhancements)
 self.addEventListener('message', (event) => {
-  if (event.data === 'clear-offline-cache') {
+  const data = event.data;
+  if (!data) return;
+  if (data === 'clear-offline-cache') {
     caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('glp-')).map(k => caches.delete(k))));
+    return;
+  }
+  if (data.type === 'warm-cache' && Array.isArray(data.urls)) {
+    const urls = data.urls;
+    event.waitUntil(
+      (async () => {
+        const shell = await caches.open(APP_SHELL_CACHE);
+        const staticCache = await caches.open(STATIC_CACHE);
+        await Promise.all(urls.map(async (u) => {
+          try {
+            const res = await fetch(u, { cache: 'no-store' });
+            if (res.ok) {
+              const dest = (u.endsWith('.js') || u.endsWith('.css') || u.endsWith('.woff2')) ? staticCache : shell;
+              dest.put(u, res.clone());
+            }
+          } catch {}
+        }));
+      })()
+    );
   }
 });

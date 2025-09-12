@@ -41,6 +41,22 @@ export default function ServiceWorkerRegister() {
                 }
               });
             });
+
+            // After activation, warm-cache critical routes and assets
+            const warmList = [
+              '/', '/student', '/student/challenges', '/student/achievements', '/student/courses', '/subjects', '/teacher',
+              '/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2', '/logo.png', '/manifest.json'
+            ];
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({ type: 'warm-cache', urls: warmList });
+            } else {
+              // If no controller yet, wait briefly and try again
+              navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (navigator.serviceWorker.controller) {
+                  navigator.serviceWorker.controller.postMessage({ type: 'warm-cache', urls: warmList });
+                }
+              });
+            }
           })
           .catch((err) => console.error('SW registration failed', err));
       };

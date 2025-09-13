@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>You're offline</title>
+		<meta name="theme-color" content="#0f172a" />
+		<link rel="icon" href="/logo.png" />
+		<style>
+			:root { color-scheme: light dark; }
+			body {
+				margin: 0;
+				font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+				background: #ffffff;
+				color: #000;
+				display: grid;
+				place-items: center;
+				min-height: 100dvh;
+			}
+			.card {
+				background: #d4ffd4;
+				border: 1px solid rgba(0,0,0,0.1);
+				border-radius: 16px;
+				padding: 24px;
+				max-width: 520px;
+				box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+				text-align: center;
+			}
+			h1 { font-size: 1.5rem; margin: 0 0 8px; }
+			p { margin: 0 0 16px; line-height: 1.5; }
+			.row { display: flex; justify-content: center; gap: 12px; }
+			.btn {
+				padding: 10px 16px;
+				border-radius: 10px;
+				border: 1px solid rgba(0,0,0,0.15);
+				background: white;
+				color: #000;
+				cursor: pointer;
+			}
+			.btn:active { transform: translateY(1px); }
+			.hint { font-size: 0.9rem; opacity: 0.75; }
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<img src="/logo.png" alt="App logo" width="64" height="64" style="border-radius:12px;margin-bottom:12px" />
+			<h1>You're offline</h1>
+			<p>
+				This page isn't available without an internet connection yet. Many pages, assets, and data are cached and
+				will work offline. Try opening a cached page like the Student or Teacher dashboard.
+			</p>
+			<div class="row" style="margin-bottom:12px">
+				<button class="btn" onclick="location.href='/'">Go to Home</button>
+				<button class="btn" onclick="location.href='/student'">Student Dashboard</button>
+				<button class="btn" onclick="location.href='/teacher'">Teacher Dashboard</button>
+			</div>
+			<div class="row">
+				<button class="btn" onclick="location.reload()">Try Again</button>
+			</div>
+			<p class="hint" style="margin-top:14px">
+				Tip: Once you're back online, we'll sync any actions you took while offline.
+			</p>
+		</div>
+	</body>
+	<script>
+		// If connection returns, attempt to reload automatically after a short delay
+		window.addEventListener('online', () => setTimeout(() => location.reload(), 800));
+	</script>
+	</html>

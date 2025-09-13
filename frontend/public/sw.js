@@ -1,8 +1,9 @@
 /* PWA Service Worker
-  - Avoids caching Next.js dynamic dev chunks (/_next/*) that caused chunk load errors
-  - Network-first for navigation & API; cache-first for immutable hashed assets
+  - Robust offline support for pages, assets, and API data
+  - Next.js chunk handling to prevent chunk load errors
+  - Request queue for offline POST/PUT/DELETE with background sync
 */
-const VERSION = 'v8';
+const VERSION = 'v9';
 const APP_SHELL_CACHE = `glp-shell-${VERSION}`;
 const STATIC_CACHE = `glp-static-${VERSION}`;
 const DATA_CACHE = `glp-data-${VERSION}`;
@@ -13,13 +14,14 @@ const CORE_ASSETS = [
   '/offline.html',
   '/favicon.ico',
   // Fonts commonly used by the app
-  '/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2'
+  '/fonts/KFOmCnqEu92Fr1Mu4mxK.woff2'
 ];
 
 // IndexedDB helpers for storing JSON payloads (subjects, quizzes, streak etc.)
 const DB_NAME = 'glp-offline';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_JSON = 'json';
+const STORE_QUEUE = 'queue';
 
 function idbOpen() {
   return new Promise((resolve, reject) => {
@@ -27,6 +29,7 @@ function idbOpen() {
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_JSON)) db.createObjectStore(STORE_JSON);
+      if (!db.objectStoreNames.contains(STORE_QUEUE)) db.createObjectStore(STORE_QUEUE, { autoIncrement: true });
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
@@ -54,6 +57,67 @@ async function idbGet(key) {
   } catch { return null; }
 }
 
+// Queue helpers for offline write operations
+async function idbQueueAdd(record) {
+  try {
+    const db = await idbOpen();
+    const tx = db.transaction(STORE_QUEUE, 'readwrite');
+    tx.objectStore(STORE_QUEUE).add(record);
+    return tx.complete;
+  } catch {}
+}
+
+async function idbQueueGetAll() {
+  try {
+    const db = await idbOpen();
+    const tx = db.transaction(STORE_QUEUE, 'readonly');
+    return await new Promise((res, rej) => {
+      const req = tx.objectStore(STORE_QUEUE).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => rej(req.error);
+    });
+  } catch { return []; }
+}
+
+async function idbQueueClear() {
+  try {
+    const db = await idbOpen();
+    const tx = db.transaction(STORE_QUEUE, 'readwrite');
+    tx.objectStore(STORE_QUEUE).clear();
+    return tx.complete;
+  } catch {}
+}
+
+async function flushRequestQueue() {
+  const queued = await idbQueueGetAll();
+  if (!queued.length) return { flushed: 0 };
+  let flushed = 0;
+  for (const q of queued) {
+    try {
+      const { url, method, headers, body } = q;
+      const res = await fetch(url, { method, headers, body });
+      if (res && res.ok) flushed++;
+      // Optionally cache any JSON response
+      try {
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('application/json')) {
+          const data = await res.clone().json();
+          idbPut(new URL(url).pathname, { data, ts: Date.now() });
+        }
+      } catch {}
+    } catch (e) {
+      // Stop on first failure to retry later
+      break;
+    }
+  }
+  // If all flushed successfully, clear queue
+  if (flushed === queued.length) await idbQueueClear();
+  // Notify clients
+  const clientsList = await self.clients.matchAll({ includeUncontrolled: true });
+  clientsList.forEach(c => c.postMessage({ type: 'queue-flushed', flushed }));
+  return { flushed };
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
@@ -61,12 +125,21 @@ self.addEventListener('install', (event) => {
       await cache.addAll(CORE_ASSETS);
       // Pre-cache key app routes for better offline experience
       try {
-        await cache.add('/student');
-        await cache.add('/student/challenges');
-        await cache.add('/student/achievements');
-        await cache.add('/student/courses');
-        await cache.add('/teacher');
-        await cache.add('/subjects');
+        const routes = [
+          '/',
+          '/student',
+          '/student/challenges',
+          '/student/achievements',
+          '/student/courses',
+          '/student/study-buddy',
+          '/teacher',
+          '/teacher/students',
+          '/teacher/classes',
+          '/teacher/reports',
+          '/subjects',
+          '/progress',
+        ];
+        await Promise.all(routes.map(r => cache.add(r)));
         console.log('[SW] Pre-cached app routes');
       } catch (e) {
         console.log('[SW] Could not pre-cache routes (server may be down)');
@@ -90,9 +163,37 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
 
   // Ignore non-GET
-  if (request.method !== 'GET') return;
+  const isGet = request.method === 'GET';
 
   const url = new URL(request.url);
+
+  // Queue non-GET API requests when offline
+  if (!isGet) {
+    const isApi = url.pathname.startsWith('/api/') || url.origin.includes('localhost:4000');
+    if (isApi) {
+      event.respondWith((async () => {
+        try {
+          // Try network first
+          return await fetch(request);
+        } catch (e) {
+          // Offline: queue the request
+          const body = await request.clone().arrayBuffer().catch(() => null);
+          const headers = {};
+          request.headers.forEach((v, k) => headers[k] = v);
+          await idbQueueAdd({ url: request.url, method: request.method, headers, body });
+          // Attempt background sync
+          if ('sync' in self.registration) {
+            try { await self.registration.sync.register('api-sync'); } catch {}
+          }
+          return new Response(JSON.stringify({ queued: true, offline: true }), {
+            status: 202,
+            headers: { 'Content-Type': 'application/json', 'X-Queued': '1' }
+          });
+        }
+      })());
+      return;
+    }
+  }
 
   // Handle Next.js chunks - improved error handling and fallbacks
   if (url.pathname.startsWith('/_next/') && url.hostname === self.location.hostname) {
@@ -156,7 +257,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // API & data endpoints: network-first with fallback to cache / IndexedDB
-  const isData = url.pathname.startsWith('/api/') || url.pathname.includes('/quiz') || url.pathname.includes('/streak') || url.pathname.startsWith('/subjects') || url.pathname.startsWith('/leaderboard');
+  const isData = url.pathname.startsWith('/api/') || url.origin.includes('localhost:4000') || url.pathname.includes('/quiz') || url.pathname.includes('/streak') || url.pathname.startsWith('/subjects') || url.pathname.startsWith('/leaderboard');
   if (isData) {
     event.respondWith(
       (async () => {
@@ -172,6 +273,9 @@ self.addEventListener('fetch', (event) => {
             } catch {}
           }
           caches.open(DATA_CACHE).then(c => c.put(request, clone));
+          // Notify clients for data updates
+          const clientsList = await self.clients.matchAll({ includeUncontrolled: true });
+          clientsList.forEach(c => c.postMessage({ type: 'data-updated', key: url.pathname + url.search }));
           return res;
         } catch (err) {
           // Try cache
@@ -268,7 +372,14 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Client message handler (optional future enhancements)
+// Background sync for queued requests
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'api-sync') {
+    event.waitUntil(flushRequestQueue());
+  }
+});
+
+// Client message handler
 self.addEventListener('message', (event) => {
   const data = event.data;
   if (!data) return;
@@ -293,5 +404,9 @@ self.addEventListener('message', (event) => {
         }));
       })()
     );
+    return;
+  }
+  if (data.type === 'flush-queue') {
+    event.waitUntil(flushRequestQueue());
   }
 });

@@ -44,8 +44,30 @@ export default function ServiceWorkerRegister() {
 
             // After activation, warm-cache critical routes and assets
             const warmList = [
-              '/', '/student', '/student/challenges', '/student/achievements', '/student/courses', '/subjects', '/teacher',
-              '/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2', '/logo.png', '/manifest.json'
+              '/',
+              '/student',
+              '/student/challenges',
+              '/student/achievements',
+              '/student/courses',
+              '/student/study-buddy',
+              '/subjects',
+              '/teacher',
+              '/teacher/students',
+              '/teacher/classes',
+              '/teacher/reports',
+              '/progress',
+              '/fonts/KFOmCnqEu92Fr1Mu4mxK.woff2',
+              '/logo.png',
+              '/manifest.json',
+              // PWA icons (standard + maskable)
+              '/icons/icon-192.png',
+              '/icons/icon-192-maskable.png',
+              '/icons/icon-256.png',
+              '/icons/icon-256-maskable.png',
+              '/icons/icon-384.png',
+              '/icons/icon-384-maskable.png',
+              '/icons/icon-512.png',
+              '/icons/icon-512-maskable.png'
             ];
             if (navigator.serviceWorker.controller) {
               navigator.serviceWorker.controller.postMessage({ type: 'warm-cache', urls: warmList });
@@ -63,6 +85,32 @@ export default function ServiceWorkerRegister() {
       if (document.readyState === 'complete') register();
       else window.addEventListener('load', register);
     }
+
+    // Listen for SW messages (queue flush/data updated)
+    const onMessage = (event) => {
+      const msg = event.data;
+      if (!msg) return;
+      if (msg.type === 'queue-flushed') {
+        console.log(`Offline queue flushed: ${msg.flushed}`);
+      }
+      if (msg.type === 'data-updated') {
+        console.log('Data updated from network:', msg.key);
+      }
+    };
+    navigator.serviceWorker?.addEventListener?.('message', onMessage);
+
+    // When coming online, ask SW to flush queue
+    const onOnline = () => {
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'flush-queue' });
+      }
+    };
+    window.addEventListener('online', onOnline);
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener?.('message', onMessage);
+      window.removeEventListener('online', onOnline);
+    };
   }, []);
   return null;
 }

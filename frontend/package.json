@@ -9,6 +9,7 @@
     "lint": "eslint",
     "pwa:icons": "node scripts/real-generate-icons.js",
     "convert:student": "node scripts/convert-student-ts-to-js.mjs"
+    ,"convert:teacher": "node scripts/convert-teacher-ts-to-js.mjs"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.31.9",
@@ -39,6 +40,7 @@
     "next-pwa": "^5.6.0",
     "pouchdb": "^9.0.0",
     "pouchdb-browser": "^7.3.1",
+    "recharts": "^2.15.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
   "react-icons": "^5.5.0",

@@ -44,15 +44,15 @@ export default function StudentLayout({ children }) {
       <SignedIn>
         <div
           className="min-h-screen"
-          style={{ backgroundColor: isLight ? "#ebffeb" : "#0b0b0f", color: isLight ? "#000000" : "#f8fafc" }}
+          style={{ backgroundColor: isLight ? "#ffffff" : "#0b0b0f", color: isLight ? "#000000" : "#f8fafc" }}
         >
           {/* Header */}
           <header
             className="sticky top-0 z-40 border-b backdrop-blur"
             style={{
-              backgroundColor: isLight ? "#ebffeb" : "#000000",
+              backgroundColor: isLight ? "#ffffff" : "#000000",
               color: isLight ? "#000000" : "#f8fafc",
-              borderColor: isLight ? "#bfeebf" : "#1f2430",
+              borderColor: isLight ? "#e5e7eb" : "#1f2430",
             }}
           >
             <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
@@ -121,16 +121,29 @@ export default function StudentLayout({ children }) {
           <div
             className="md:hidden fixed bottom-0 inset-x-0 border-t backdrop-blur"
             style={{
-              backgroundColor: isLight ? "#ebffeb" : "#000000",
+              backgroundColor: isLight ? "#ffffff" : "#000000",
               color: isLight ? "#000000" : "#f8fafc",
-              borderColor: isLight ? "#bfeebf" : "#1f2430",
+              borderColor: isLight ? "#e5e7eb" : "#1f2430",
             }}
           >
             <div className="grid grid-cols-4">
               {navItems.slice(0, 4).map(({ href, label, icon: Icon }) => {
                 const active = pathname === href;
                 return (
-                  <Link key={href} href={href} className={cn("flex flex-col items-center py-2 text-xs", isLight ? (active ? "text-black" : "text-black/70") : (active ? "text-blue-400" : "opacity-80"))}> 
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex flex-col items-center py-2 text-xs",
+                      isLight
+                        ? active
+                          ? "text-black"
+                          : "text-black/70"
+                        : active
+                        ? "text-white"
+                        : "text-slate-300"
+                    )}
+                  >
                     <Icon className="w-5 h-5" />
                     {label}
                   </Link>

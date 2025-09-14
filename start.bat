@@ -1,5 +1,5 @@
 @echo off
-echo 🚀 Starting Gamified STEM Learning Platform...
+echo 🚀 Starting GYANARATNA Platform...
 echo.
 
 REM Check if Node.js is installed

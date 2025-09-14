@@ -1,0 +1,50 @@
+{
+	"name": "Gamified Learning Platform",
+	"short_name": "GLP",
+	"id": "/?source=pwa",
+	"description": "Learn STEM with a fun, gamified experience for students and powerful analytics for teachers.",
+	"start_url": "/",
+	"scope": "/",
+	"display": "standalone",
+	"orientation": "portrait",
+	"background_color": "#ffffff",
+	"theme_color": "#0f172a",
+	"lang": "en-US",
+	"dir": "ltr",
+	"categories": ["education", "productivity", "games"],
+	"icons": [
+		{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+		{ "src": "/icons/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/icon-256-maskable.png", "sizes": "256x256", "type": "image/png", "purpose": "maskable" },
+		{ "src": "/icons/icon-384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/icon-384-maskable.png", "sizes": "384x384", "type": "image/png", "purpose": "maskable" },
+		{ "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+		{ "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+	],
+	"screenshots": [
+		{ "src": "/screenshots/mobile-1.png", "form_factor": "narrow", "label": "Student dashboard" },
+		{ "src": "/screenshots/wide-1.png", "form_factor": "wide", "label": "Teacher analytics" }
+	],
+	"shortcuts": [
+		{
+			"name": "Student Dashboard",
+			"short_name": "Student",
+			"url": "/student",
+			"icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		},
+		{
+			"name": "Teacher Dashboard",
+			"short_name": "Teacher",
+			"url": "/teacher",
+			"icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		},
+		{
+			"name": "Reports",
+			"short_name": "Reports",
+			"url": "/teacher/reports",
+			"icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+		}
+	],
+	"prefer_related_applications": false
+}

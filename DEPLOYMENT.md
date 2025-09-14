@@ -1,4 +1,4 @@
-# 🎯 Gamified STEM Learning Platform - Deployment Guide
+# 🎯 GYANARATNA Platform - Deployment Guide
 
 ## 🚀 Quick Setup for New Machines
 

@@ -25,7 +25,7 @@ export default function Layout({ children }) {
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="bg-indigo-600 text-white p-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Gamified STEM Learning</h1>
+        <h1 className="text-xl font-bold">GYANARATNA</h1>
         <nav className="space-x-4 hidden md:block">
           <Link href="/student-dashboard">Student</Link>
           <Link href="/teacher-dashboard">Teacher</Link>
@@ -44,7 +44,7 @@ export default function Layout({ children }) {
 
       {/* Footer */}
       <footer className="bg-gray-200 text-gray-700 p-4 text-center">
-        &copy; {new Date().getFullYear()} Gamified STEM Learning
+        &copy; {new Date().getFullYear()} GYANARATNA
       </footer>
     </div>
   );

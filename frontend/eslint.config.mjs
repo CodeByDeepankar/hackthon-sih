@@ -18,6 +18,8 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      "src/teacher/components/ui/**",
+      "src/student/components/ui/**",
     ],
   },
 ];

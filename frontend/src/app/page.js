@@ -106,26 +106,10 @@ export default function Welcome() {
         strategy="afterInteractive" // loads after hydration
         defer
       />
-  <section className="relative text-center h-150 bg-[#fcfcfc] overflow-hidden flex items-center">
-      {/* subtle decorative shapes to give a shopify-like white + blue/green feel */}
-      <svg className="absolute left-0 top-0 -translate-x-1/4 -translate-y-1/4 opacity-30 pointer-events-none" width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <circle cx="80" cy="80" r="120" fill="url(#g1)" />
-        <defs>
-          <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#BAE6FD" />
-            <stop offset="100%" stopColor="#D1FAE5" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <svg className="absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4 opacity-20 pointer-events-none" width="380" height="380" viewBox="0 0 380 380" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <rect x="40" y="40" width="300" height="300" rx="150" fill="url(#g2)" />
-        <defs>
-          <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#D1FAE5" />
-            <stop offset="100%" stopColor="#BFDBFE" />
-          </linearGradient>
-        </defs>
-      </svg>
+      <div>
+        
+      </div>
+  <section className="relative w-[80vw] m-auto text-center h-150 bg-[#ffff] overflow-hidden flex items-center">
       <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex items-center">
         <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-8 h-full">
           {/* Left column: heading, paragraph, CTA */}

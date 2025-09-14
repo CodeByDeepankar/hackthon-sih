@@ -25,8 +25,8 @@ export default function Header() {
 
   return (
     <header
-      className="p-4 flex justify-between items-center"
-      style={isLight ? { backgroundColor: "#ebffeb", color: "#000000" } : { backgroundColor: "#000000", color: "#f8fafc" }}
+      className="p-4 w-[80vw] m-auto flex justify-between items-center"
+      style={isLight ? { backgroundColor: "#ffffff", color: "#000000" } : { backgroundColor: "#000000", color: "#f8fafc" }}
     >
       <div className="flex items-center gap-2">
         {/* Use public asset with absolute path; fallback to initials if missing */}

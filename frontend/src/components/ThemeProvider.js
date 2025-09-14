@@ -41,13 +41,14 @@ export default function ThemeProvider({ children }) {
     const delVar = (name) => root.style.removeProperty(name);
 
     if (theme === "light") {
-      // Page background and global text color
-      body.style.backgroundColor = "#ebffeb"; // light green page bg
+      // Page background and global text color (neutral light theme)
+      body.style.backgroundColor = "#ffffff"; // white page bg
       body.style.color = "#000000"; // make content text black
 
       // Token-based variables used across the UI system
-      setVar("--background", "#ebffeb");
+      setVar("--background", "#ffffff");
       setVar("--foreground", "#000000");
+      // Keep existing light component tokens for now unless overridden locally
       setVar("--card", "#d4ffd4");
       setVar("--card-foreground", "#000000");
       setVar("--popover", "#d4ffd4");
@@ -60,7 +61,7 @@ export default function ThemeProvider({ children }) {
       setVar("--accent-foreground", "#000000");
       setVar("--input-background", "#d4ffd4");
       setVar("--switch-background", "#d4ffd4");
-      setVar("--border", "#bfeebf"); // subtle border to match palette
+      setVar("--border", "#e5e7eb"); // neutral gray border (Tailwind slate-200)
     } else {
       // Clean up inline overrides for dark or other themes
       body.style.removeProperty("background-color");

@@ -169,8 +169,8 @@ export default function WelcomeOrRedirect() {
           </div>
 
           {/* Right column: mascot animation */}
-          <div className="flex items-center justify-center">
-            <div className="w-full max-w-4xl flex items-center justify-center px-4">
+          <div className="flex items-center justify-center w-full h-full">
+            <div className="w-full max-w-none flex items-center justify-center px-0">
               {!showGif ? (
                 <video
                   ref={videoRef}
@@ -180,13 +180,13 @@ export default function WelcomeOrRedirect() {
                   muted
                   playsInline
                   onEnded={() => setShowGif(true)}
-                  className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
+                  className="w-full h-auto max-h-[200vh] mx-auto block object-contain"
                 />
               ) : (
                 <img
                   src="/home.gif"
                   alt="Home animation"
-                  className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
+                  className="w-full h-auto max-h-[200vh] mx-auto block object-contain"
                 />
               )}
             </div>

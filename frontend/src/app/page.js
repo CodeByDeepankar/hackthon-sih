@@ -1,11 +1,12 @@
 "use client";
 import Script from "next/script";
+import Image from "next/image";
 
 import { useEffect, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import { SignedOut, SignedIn, SignInButton, UserButton, useUser } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import { fetchUserRole } from '@/lib/users';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const headingVariants = {
   hidden: { opacity: 0, y: 18, scale: 0.98 },
@@ -39,21 +40,10 @@ const wordChild = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: 'easeOut' } }
 };
 
-export default function WelcomeOrRedirect() {
+export default function Welcome() {
   const router = useRouter();
-  const { user, isLoaded } = useUser();
-
-  useEffect(() => {
-    if (!isLoaded) return;
-    async function go() {
-      if (!user) return; // stay on landing; SignedOut UI will show CTA
-      const record = await fetchUserRole(user.id).catch(() => null);
-      if (record?.role === 'student') router.replace('/student');
-      else if (record?.role === 'teacher') router.replace('/teacher');
-      else router.replace('/role-select');
-    }
-    go();
-  }, [isLoaded, user, router]);
+  const { isLoaded, isSignedIn, user } = useUser();
+  const [redirecting, setRedirecting] = useState(false);
 
   // Preload the GIF so it appears instantly when the MP4 ends
   useEffect(() => {
@@ -87,6 +77,28 @@ export default function WelcomeOrRedirect() {
     }
   }, [showGif]);
 
+  // If signed in, redirect based on role
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn || !user?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchUserRole(user.id).catch(() => null);
+        const role = typeof data === 'string' ? data : data?.role;
+        if (!role || cancelled) return;
+        setRedirecting(true);
+        if (role === 'student') router.replace('/student');
+        else if (role === 'teacher') router.replace('/teacher');
+        else router.replace('/role-select');
+      } catch (_) {
+        // ignore role fetch errors on home
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoaded, isSignedIn, user?.id, router]);
+
   return (
     <>
     <Script
@@ -94,26 +106,10 @@ export default function WelcomeOrRedirect() {
         strategy="afterInteractive" // loads after hydration
         defer
       />
-  <section className="relative text-center h-150 bg-[#fcfcfc] overflow-hidden flex items-center">
-      {/* subtle decorative shapes to give a shopify-like white + blue/green feel */}
-      <svg className="absolute left-0 top-0 -translate-x-1/4 -translate-y-1/4 opacity-30 pointer-events-none" width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <circle cx="80" cy="80" r="120" fill="url(#g1)" />
-        <defs>
-          <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#BAE6FD" />
-            <stop offset="100%" stopColor="#D1FAE5" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <svg className="absolute right-0 bottom-0 translate-x-1/4 translate-y-1/4 opacity-20 pointer-events-none" width="380" height="380" viewBox="0 0 380 380" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-        <rect x="40" y="40" width="300" height="300" rx="150" fill="url(#g2)" />
-        <defs>
-          <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#D1FAE5" />
-            <stop offset="100%" stopColor="#BFDBFE" />
-          </linearGradient>
-        </defs>
-      </svg>
+      <div>
+        
+      </div>
+  <section className="relative w-[80vw] m-auto text-center h-150 bg-[#ffff] overflow-hidden flex items-center">
       <div className="relative z-10 max-w-6xl mx-auto px-4 h-full flex items-center">
         <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-8 h-full">
           {/* Left column: heading, paragraph, CTA */}
@@ -161,9 +157,12 @@ export default function WelcomeOrRedirect() {
             </SignedOut>
 
             <SignedIn>
-              <p className="text-slate-600">Checking your role...</p>
               <div className="mt-4">
-                <UserButton />
+                {redirecting ? (
+                  <div className="text-sm text-slate-600">Redirecting to your dashboard…</div>
+                ) : (
+                  <UserButton />
+                )}
               </div>
             </SignedIn>
           </div>
@@ -183,10 +182,18 @@ export default function WelcomeOrRedirect() {
                   className="w-full h-auto max-h-[200vh] mx-auto block object-contain"
                 />
               ) : (
-                <img
+                <Image
                   src="/home.gif"
                   alt="Home animation"
+<<<<<<< HEAD
                   className="w-full h-auto max-h-[200vh] mx-auto block object-contain"
+=======
+                  width={1280}
+                  height={720}
+                  className="w-full h-auto max-h-[72vh] mx-auto block object-contain rounded-md"
+                  priority
+                  unoptimized
+>>>>>>> 22f3a977efbe6228c43a17910d17b7db54ae4ab6
                 />
               )}
             </div>

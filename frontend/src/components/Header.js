@@ -7,10 +7,13 @@ import LanguageToggle from "@/components/LanguageToggle";
 import OnlineBadge from "@/components/OnlineBadge";
 import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useTheme } from "@/components/ThemeProvider";
 import { useState } from "react";
 
 export default function Header() {
   const pathname = usePathname();
+  const { theme } = useTheme();
+  const isLight = theme === "light";
   const isWelcome = pathname === "/";
   const isStudentShell = [
     "/student",
@@ -19,9 +22,13 @@ export default function Header() {
     "/progress",
     "/settings",
   ].some((p) => pathname?.startsWith(p));
+  const isTeacherShell = pathname?.startsWith("/teacher");
 
   return (
-    <header className="bg-blue-600 text-white p-4 flex justify-between items-center">
+    <header
+      className="p-4 w-[80vw] m-auto flex justify-between items-center"
+      style={isLight ? { backgroundColor: "#ffffff", color: "#000000" } : { backgroundColor: "#000000", color: "#f8fafc" }}
+    >
       <div className="flex items-center gap-2">
         {/* Use public asset with absolute path; fallback to initials if missing */}
         {(() => {
@@ -48,7 +55,13 @@ export default function Header() {
           // Replace nav with language toggle + online badge + Clerk profile button on student pages
           <div className="flex items-center gap-3">
             <OnlineBadge />
-            <LanguageToggle allowed={["en","or"]} />
+            <LanguageToggle allowed={["en","or","hi"]} />
+            <ThemeToggle />
+            <UserButton />
+          </div>
+        ) : isTeacherShell ? (
+          // On teacher routes, remove the default nav links (Home/Student/Teacher/Contact)
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <UserButton />
           </div>

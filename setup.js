@@ -3,7 +3,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-console.log('🚀 Setting up Gamified STEM Learning Platform...\n');
+console.log('🚀 Setting up GYANARATNA Platform...\n');
 
 // Function to run command and return promise
 function runCommand(command, args, cwd) {

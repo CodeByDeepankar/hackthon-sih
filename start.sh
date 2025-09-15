@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🚀 Starting Gamified STEM Learning Platform..."
+echo "🚀 Starting GYANARATNA Platform..."
 echo
 
 # Check if Node.js is installed

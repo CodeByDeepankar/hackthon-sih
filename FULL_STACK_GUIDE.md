@@ -1,4 +1,4 @@
-# Gamified STEM Learning Platform - Full-Stack Guide
+# GYANARATNA Platform - Full-Stack Guide
 
 ## System Architecture
 

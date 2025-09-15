@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@student/*": ["./src/student/*"],
+      "@teacher/*": ["./src/teacher/*"]
     },
     "checkJs": false,
     "skipLibCheck": true

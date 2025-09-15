@@ -4,8 +4,10 @@ import { Button } from "./ui/button";
 import { Progress } from "./ui/progress";
 import { Badge } from "./ui/badge";
 import { CheckCircle, XCircle, Star, Trophy, Clock, Target, ChevronLeft, RotateCcw } from "lucide-react";
+import { useI18n } from "@/i18n/useI18n";
 
 export default function QuizComponent() {
+	const { t } = useI18n();
 	const [index, setIndex] = useState(0);
 	const questions = [
 		{ q: '2 + 2 = ?', options: ['3', '4', '5'], answer: 1 },
@@ -15,7 +17,7 @@ export default function QuizComponent() {
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Quick Quiz</CardTitle>
+				<CardTitle>{t.quiz.title()}</CardTitle>
 			</CardHeader>
 			<CardContent>
 				<p className="mb-3">{q.q}</p>
@@ -25,8 +27,8 @@ export default function QuizComponent() {
 					))}
 				</div>
 				<div className="flex justify-between mt-4">
-					<Button variant="outline" size="sm" onClick={() => setIndex(Math.max(0, index - 1))}>Prev</Button>
-					<Button size="sm" onClick={() => setIndex(Math.min(questions.length - 1, index + 1))}>Next</Button>
+					<Button variant="outline" size="sm" onClick={() => setIndex(Math.max(0, index - 1))}>{t.common.prev()}</Button>
+					<Button size="sm" onClick={() => setIndex(Math.min(questions.length - 1, index + 1))}>{t.common.next()}</Button>
 				</div>
 			</CardContent>
 		</Card>

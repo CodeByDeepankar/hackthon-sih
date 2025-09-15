@@ -170,6 +170,17 @@ class ApiClient {
   }
 
   // ===========================================
+  // ACHIEVEMENTS API
+  // ===========================================
+  async getAchievements(userId) {
+    return this.request(`/achievements/${userId}`);
+  }
+
+  async upsertAchievement(data) {
+    return this.request('/achievements', { method: 'POST', body: data });
+  }
+
+  // ===========================================
   // LEADERBOARD API
   // ===========================================
 

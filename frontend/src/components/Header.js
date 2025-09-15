@@ -22,6 +22,7 @@ export default function Header() {
     "/progress",
     "/settings",
   ].some((p) => pathname?.startsWith(p));
+  const isTeacherShell = pathname?.startsWith("/teacher");
 
   return (
     <header
@@ -54,7 +55,13 @@ export default function Header() {
           // Replace nav with language toggle + online badge + Clerk profile button on student pages
           <div className="flex items-center gap-3">
             <OnlineBadge />
-            <LanguageToggle allowed={["en","or"]} />
+            <LanguageToggle allowed={["en","or","hi"]} />
+            <ThemeToggle />
+            <UserButton />
+          </div>
+        ) : isTeacherShell ? (
+          // On teacher routes, remove the default nav links (Home/Student/Teacher/Contact)
+          <div className="flex items-center gap-3">
             <ThemeToggle />
             <UserButton />
           </div>

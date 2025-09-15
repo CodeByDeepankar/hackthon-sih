@@ -6,8 +6,10 @@ import { Award, Star, Trophy, Target, BookOpen, Zap, Calendar, Users, ChevronLef
 
 // Add this import at the top of the file
 import { useState } from "react";
+import { useI18n } from "@/i18n/useI18n";
 
 export default function Achievements() {
+	const { t } = useI18n();
 	const achievements = [
 		{ id: 1, title: 'Math Whiz', desc: 'Complete 10 math lessons', icon: <Award className="w-4 h-4" /> },
 		{ id: 2, title: 'Science Explorer', desc: 'Finish 5 experiments', icon: <Star className="w-4 h-4" /> },

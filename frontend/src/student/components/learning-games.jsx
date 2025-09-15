@@ -5,15 +5,17 @@ import { Badge } from "./ui/badge";
 import { SubHeader } from "./sub-header";
 import { Gamepad2, Brain, Zap, Puzzle, Timer, Users, Star, Trophy, Play, RotateCcw, Target, Sparkles, BookOpen, Calculator, Globe, Atom, ChevronRight, Crown, Gem } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useI18n } from "@/i18n/useI18n";
 
 export default function LearningGames() {
+	const { t } = useI18n();
 	const games = [
-		{ id: 'math-blitz', title: 'Math Blitz', emoji: '🔢', status: 'New' },
-		{ id: 'science-quest', title: 'Science Quest', emoji: '🧪', status: 'Popular' },
+		{ id: 'math-blitz', title: t.games.titles.mathBlitz(), emoji: '🔢', status: t.games.status.new() },
+		{ id: 'science-quest', title: t.games.titles.scienceQuest(), emoji: '🧪', status: t.games.status.popular() },
 	];
 	return (
 			<div className="space-y-4">
-				<SubHeader customContent={<div className="text-sm light:text-black text-gray-600">Play and learn with quick challenges!</div>} />
+				<SubHeader customContent={<div className="text-sm light:text-black text-gray-600">{t.games.intro()}</div>} />
 			<div className="grid gap-4 md:grid-cols-2">
 				{games.map(g => (
 					<Card key={g.id}>
@@ -24,7 +26,7 @@ export default function LearningGames() {
 							</CardTitle>
 						</CardHeader>
 						<CardContent>
-							<Button size="sm" className="gap-2 light:text-black"><Play className="w-4 h-4" /> Play</Button>
+							<Button size="sm" className="gap-2 light:text-black"><Play className="w-4 h-4" /> {t.common.play()}</Button>
 						</CardContent>
 					</Card>
 				))}

@@ -111,6 +111,7 @@ let db = bindDb('students');
 let usersDb = bindDb('users');
 let streaksDb = bindDb('streaks');
 let quizCompletionsDb = bindDb('quiz_completions');
+let achievementsDb = bindDb('achievements');
 let subjectsDb = bindDb('subjects');
 let quizzesDb = bindDb('quizzes');
 let questionsDb = bindDb('questions');
@@ -175,7 +176,7 @@ async function ensureDatabases() {
     return;
   }
   const required = [
-    'students','users','streaks','quiz_completions',
+    'students','users','streaks','quiz_completions','achievements',
     'subjects','quizzes','questions','responses'
   ];
   for (const name of required) {
@@ -199,6 +200,7 @@ ensureDatabases().then(()=>{
   usersDb = bindDb('users');
   streaksDb = bindDb('streaks');
   quizCompletionsDb = bindDb('quiz_completions');
+  achievementsDb = bindDb('achievements');
   subjectsDb = bindDb('subjects');
   quizzesDb = bindDb('quizzes');
   questionsDb = bindDb('questions');
@@ -213,7 +215,8 @@ async function ensureDesignDocs() {
     { db: quizzesDb, id: '_design/quizzes', doc: { _id: '_design/quizzes', views: { all: { map: "function(doc){ if(doc.type==='quiz'){ emit(doc.createdAt,doc); } }" }, by_subject: { map: "function(doc){ if(doc.type==='quiz'){ emit(doc.subjectId,doc); } }" } } } },
     { db: questionsDb, id: '_design/questions', doc: { _id: '_design/questions', views: { by_quiz: { map: "function(doc){ if(doc.type==='question'){ emit(doc.quizId,doc); } }" } } } },
     { db: usersDb, id: '_design/users', doc: { _id: '_design/users', views: { all: { map: "function(doc){ if(doc.type==='userRole'){ emit(doc.userId,doc); } }" }, by_school: { map: "function(doc){ if(doc.type==='userRole' && doc.schoolId){ emit(doc.schoolId,doc); } }" }, by_role: { map: "function(doc){ if(doc.type==='userRole'){ emit(doc.role,doc); } }" } } } },
-    { db: responsesDb, id: '_design/responses', doc: { _id: '_design/responses', views: { all: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.submittedAt,doc); } }" }, by_student: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.studentId,doc); } }" }, by_quiz: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.quizId,doc); } }" } } } }
+    { db: responsesDb, id: '_design/responses', doc: { _id: '_design/responses', views: { all: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.submittedAt,doc); } }" }, by_student: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.studentId,doc); } }" }, by_quiz: { map: "function(doc){ if(doc.type==='quiz_response'){ emit(doc.quizId,doc); } }" } } } },
+    { db: achievementsDb, id: '_design/achievements', doc: { _id: '_design/achievements', views: { by_user: { map: "function(doc){ if(doc.type==='achievement'){ emit(doc.userId, doc); } }" }, by_key: { map: "function(doc){ if(doc.type==='achievement'){ emit([doc.userId, doc.key], doc); } }" } } } }
   ];
   for (const item of designDocs) {
     try { await item.db.get(item.id); } catch (e) {
@@ -1097,7 +1100,7 @@ app.post("/quiz-completion", async (req, res) => {
       type: "quiz_completion"
     };
 
-    // Save the completion
+  // Save the completion
     const response = await quizCompletionsDb.insert(completionDoc);
     
     // Calculate updated streak
@@ -1126,6 +1129,54 @@ app.post("/quiz-completion", async (req, res) => {
       await streaksDb.insert(streakDoc);
     } catch (streakError) {
       console.error('Error updating streak:', streakError);
+    }
+
+    // Award achievements: Math badge for perfect score (10/10 or 100%)
+    try {
+      const perfect = (score === 100 || score === 10);
+      // Identify math subject heuristically: if subject name/id includes 'math' or quizId/title contains 'math'
+      let isMath = false;
+      try {
+        // Try resolve subject doc if subject looks like an id
+        if (subject) {
+          const subjDoc = await subjectsDb.get(subject).catch(() => null);
+          if (subjDoc) {
+            isMath = /math|mathematics/i.test(subjDoc.name || '') || /math/i.test(subjDoc._id || '');
+          } else {
+            // Subject might be a string label
+            isMath = /math|mathematics/i.test(String(subject));
+          }
+        }
+        // Fallback: try quiz title
+        const qDoc = await quizzesDb.get(quizId).catch(() => null);
+        if (!isMath && qDoc) {
+          isMath = /math|mathematics/i.test(qDoc.title || '') || /math/i.test(qDoc._id || '');
+        }
+      } catch {}
+
+      if (perfect && isMath) {
+        const achKey = 'badge:math:perfect-10';
+        const achId = `ach:${userId}:${achKey}`;
+        let existing;
+        try { existing = await achievementsDb.get(achId); } catch {}
+        if (!existing) {
+          const achDoc = {
+            _id: achId,
+            userId,
+            key: achKey,
+            title: 'Math Whiz',
+            description: 'Scored 10/10 on a math quiz',
+            icon: '📘',
+            awardedAt: new Date().toISOString(),
+            meta: { quizId },
+            type: 'achievement'
+          };
+          await achievementsDb.insert(achDoc);
+          broadcast('achievement.awarded', { userId, key: achKey, title: achDoc.title });
+        }
+      }
+    } catch (achErr) {
+      console.warn('Achievement award error', achErr?.message || achErr);
     }
 
     res.json({
@@ -1655,5 +1706,58 @@ app.post('/ai/study-buddy', aiRateGuard, async (req,res) => {
       return res.status(503).json({ error: 'AI service not configured' });
     }
     res.status(500).json({ error: msg });
+  }
+});
+
+// Achievements endpoints
+app.get('/achievements/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    // Try view first; fallback to full list
+    let rows = [];
+    try {
+      const v = await achievementsDb.view('achievements','by_user',{ key: userId, include_docs:true });
+      rows = v.rows;
+    } catch {
+      const all = await achievementsDb.list({ include_docs:true }).catch(()=>({ rows:[] }));
+      rows = all.rows.filter(r => r.doc?.type === 'achievement' && r.doc.userId === userId);
+    }
+    const achievements = rows.map(r => r.doc).map(d => ({
+      id: d._id,
+      key: d.key,
+      title: d.title,
+      description: d.description,
+      icon: d.icon || null,
+      awardedAt: d.awardedAt,
+      meta: d.meta || {}
+    }));
+    res.json({ userId, achievements });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/achievements', async (req, res) => {
+  try {
+    const { userId, key, title, description, icon, meta } = req.body || {};
+    if (!userId || !key) return res.status(400).json({ error: 'userId and key are required' });
+    const id = `ach:${userId}:${key}`;
+    let existing; try { existing = await achievementsDb.get(id); } catch {}
+    const doc = {
+      _id: id,
+      ...(existing ? { _rev: existing._rev } : {}),
+      userId,
+      key,
+      title: title || existing?.title || key,
+      description: description || existing?.description || '',
+      icon: icon || existing?.icon || null,
+      awardedAt: existing?.awardedAt || new Date().toISOString(),
+      type: 'achievement',
+      meta: meta || existing?.meta || {}
+    };
+    const out = await achievementsDb.insert(doc);
+    res.json({ ok: true, id: out.id, rev: out.rev });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });

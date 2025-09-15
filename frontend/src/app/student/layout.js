@@ -7,20 +7,21 @@ import { Card } from "@/student/components/ui/card";
 import { cn } from "@/student/components/ui/utils";
 import { BookOpen, Trophy, Star, Search, Gamepad2, Crown, Award, Home } from "lucide-react";
 import { Input } from "@/student/components/ui/input";
+import { useI18n } from "@/i18n/useI18n";
 import { HamburgerMenu } from "@/student/components/hamburger-menu";
 import { useUser } from "@clerk/nextjs";
 import { useRef } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
-const navItems = [
-  { href: "/student", label: "Dashboard", icon: Home },
-  { href: "/student/courses", label: "Courses", icon: BookOpen },
-  { href: "/student/achievements", label: "Achievements", icon: Star },
-  { href: "/student/leaderboard", label: "Leaderboard", icon: Trophy },
-  { href: "/student/search", label: "Search", icon: Search },
-  { href: "/student/games", label: "Games", icon: Gamepad2 },
-  { href: "/student/challenges", label: "Challenges", icon: Crown },
-  { href: "/student/adventures", label: "Adventures", icon: Award },
+const makeNavItems = (t) => [
+  { href: "/student", label: t.nav.dashboard(), icon: Home },
+  { href: "/student/courses", label: t.nav.courses(), icon: BookOpen },
+  { href: "/student/achievements", label: t.nav.achievements(), icon: Star },
+  { href: "/student/leaderboard", label: t.nav.leaderboard(), icon: Trophy },
+  { href: "/student/search", label: t.nav.search(), icon: Search },
+  { href: "/student/games", label: t.nav.games(), icon: Gamepad2 },
+  { href: "/student/challenges", label: t.nav.challenges(), icon: Crown },
+  { href: "/student/adventures", label: t.nav.adventures(), icon: Award },
 ];
 
 export default function StudentLayout({ children }) {
@@ -29,8 +30,10 @@ export default function StudentLayout({ children }) {
   const { user } = useUser();
   const searchRef = useRef(null);
   const { theme } = useTheme();
+  const { t } = useI18n();
   const isLight = theme === "light";
 
+  const navItems = makeNavItems(t);
   const menuItems = navItems.map((n) => ({ id: n.href.replace("/student", "") || "dashboard", label: n.label, icon: n.icon, href: n.href }));
   const currentSection = (pathname?.startsWith("/student/") ? pathname.split("/")[2] : "") || "dashboard";
   const studentUser = { name: user?.fullName || user?.firstName || user?.username || "Student", avatar: (user?.firstName?.[0] || user?.username?.[0] || "S").toUpperCase() };
@@ -71,7 +74,7 @@ export default function StudentLayout({ children }) {
               <div className="flex-1 max-w-xl hidden sm:flex items-center gap-2">
                 <Input
                   ref={searchRef}
-                  placeholder="Search lessons, quizzes, courses..."
+                  placeholder={t.search.placeholder()}
                   className={isLight ? "placeholder-black/70 text-black" : "placeholder-slate-400 text-slate-100"}
                   style={{
                     backgroundColor: isLight ? "#d4ffd4" : "#12141a",
@@ -105,7 +108,7 @@ export default function StudentLayout({ children }) {
                     className={cn("gap-2", isLight && "text-black", pathname === "/student" && "shadow-sm")}
                   >
                     <Home className="w-4 h-4" />
-                    Dashboard
+                    {t.nav.dashboard()}
                   </Button>
                 </Link>
               </div>

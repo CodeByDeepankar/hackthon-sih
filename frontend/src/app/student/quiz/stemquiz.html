@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Science & Technology Quiz</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .quiz-container {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            width: 90%;
+            max-width: 800px;
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        .topics-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .topic-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .topic-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+        }
+        
+        .topic-card h3 {
+            margin: 15px 0;
+            color: #2c3e50;
+        }
+        
+        .topic-card p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .topic-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .quiz-section {
+            padding: 30px;
+            display: none;
+        }
+        
+        .progress-bar {
+            height: 10px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            border-radius: 5px;
+            width: 0%;
+            transition: width 0.5s;
+        }
+        
+        .question-count {
+            font-size: 1rem;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+        
+        .question-text {
+            font-size: 1.4rem;
+            margin-bottom: 25px;
+            color: #2c3e50;
+            font-weight: 500;
+        }
+        
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .option {
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option:hover {
+            background-color: #e8f4fc;
+            border-color: #3498db;
+        }
+        
+        .option.selected {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn-next {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+        }
+        
+        .btn-next:hover {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+        
+        .btn-prev {
+            background-color: #e0e0e0;
+            color: #333;
+        }
+        
+        .btn-prev:hover {
+            background-color: #d0d0d0;
+        }
+        
+        .results-container {
+            padding: 40px;
+            text-align: center;
+            display: none;
+        }
+        
+        .results-container h2 {
+            font-size: 2rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .score-text {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            color: #7f8c8d;
+        }
+        
+        .score {
+            font-size: 3rem;
+            font-weight: bold;
+            color: #3498db;
+            margin: 20px 0;
+        }
+        
+        .btn-restart {
+            background: linear-gradient(to right, #3498db, #2c3e50);
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            margin-top: 20px;
+        }
+        
+        .science-image {
+            width: 100%;
+            border-radius: 10px;
+            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .question-text {
+                font-size: 1.2rem;
+            }
+            
+            .topics-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <div class="header">
+            <h1>Science & Technology Quiz</h1>
+            <p>Test your knowledge across various scientific disciplines</p>
+        </div>
+        
+        <div class="topics-container" id="topics-container">
+            <div class="topic-card" data-topic="scientists">
+                <div class="topic-icon">🔬</div>
+                <h3>Famous Scientists</h3>
+                <p>Discover the great minds that shaped modern science</p>
+            </div>
+            
+            <div class="topic-card" data-topic="nobel">
+                <div class="topic-icon">🏆</div>
+                <h3>Nobel Discoveries</h3>
+                <p>Groundbreaking work that earned the highest honor</p>
+            </div>
+            
+            <div class="topic-card" data-topic="trends">
+                <div class="topic-icon">📈</div>
+                <h3>Current STEM Trends</h3>
+                <p>AI, Space, Quantum Tech and more</p>
+            </div>
+            
+            <div class="topic-card" data-topic="women">
+                <div class="topic-icon">👩‍🔬</div>
+                <h3>Women in STEM</h3>
+                <p>Celebrating female pioneers in science</p>
+            </div>
+            
+            <div class="topic-card" data-topic="india">
+                <div class="topic-icon">🇮🇳</div>
+                <h3>Science in India</h3>
+                <p>ISRO, DRDO and scientific achievements</p>
+            </div>
+        </div>
+        
+        <div class="quiz-section" id="quiz-section">
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="question-count" id="question-count">Question 1 of 5</div>
+            <div class="question-text" id="question-text"></div>
+            
+            <img src="https://placehold.co/600x300" alt="Scientific laboratory with modern equipment and researchers working" id="science-image" class="science-image">
+            
+            <div class="options-container" id="options-container">
+                <!-- Options will be inserted here -->
+            </div>
+            
+            <div class="navigation">
+                <button class="btn btn-prev" id="btn-prev">Previous</button>
+                <button class="btn btn-next" id="btn-next">Next</button>
+            </div>
+        </div>
+        
+        <div class="results-container" id="results-container">
+            <h2>Quiz Completed!</h2>
+            <div class="score-text">Your final score is</div>
+            <div class="score" id="score">0/5</div>
+            <p id="result-message">Keep learning and try again!</p>
+            <button class="btn btn-restart" id="btn-restart">Try Another Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        // Quiz data
+        const quizData = {
+            scientists: {
+                title: "Famous Scientists & Their Contributions",
+                questions: [
+                    {
+                        question: "Who developed the theory of relativity?",
+                        options: [
+                            "Isaac Newton",
+                            "Albert Einstein",
+                            "Niels Bohr",
+                            "Marie Curie"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which scientist discovered the structure of DNA?",
+                        options: [
+                            "Rosalind Franklin",
+                            "James Watson and Francis Crick",
+                            "Gregor Mendel",
+                            "Louis Pasteur"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Who is known for the laws of motion and universal gravitation?",
+                        options: [
+                            "Galileo Galilei",
+                            "Stephen Hawking",
+                            "Isaac Newton",
+                            "Nikola Tesla"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Which scientist formulated the uncertainty principle?",
+                        options: [
+                            "Erwin Schrödinger",
+                            "Werner Heisenberg",
+                            "Max Planck",
+                            "Paul Dirac"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Who discovered radioactivity?",
+                        options: [
+                            "Marie Curie",
+                            "Ernest Rutherford",
+                            "Henri Becquerel",
+                            "Wilhelm Röntgen"
+                        ],
+                        correct: 2
+                    }
+                ]
+            },
+            nobel: {
+                title: "Nobel Prize Discoveries in Science",
+                questions: [
+                    {
+                        question: "Who won the Nobel Prize for the discovery of penicillin?",
+                        options: [
+                            "Marie Curie",
+                            "Alexander Fleming",
+                            "Louis Pasteur",
+                            "Robert Koch"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which scientist won a Nobel Prize for the discovery of the neutron?",
+                        options: [
+                            "Ernest Rutherford",
+                            "J.J. Thomson",
+                            "James Chadwick",
+                            "Niels Bohr"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Who was awarded the Nobel Prize for the invention of the polymerase chain reaction (PCR) method?",
+                        options: [
+                            "Kary Mullis",
+                            "Craig Venter",
+                            "James Watson",
+                            "Francis Collins"
+                        ],
+                        correct: 0
+                    },
+                    {
+                        question: "Which discovery earned the Nobel Prize in Physics in 2020?",
+                        options: [
+                            "Gravitational waves",
+                            "Black hole formation",
+                            "Exoplanets discovery",
+                            "Superconductivity"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Who won the Nobel Prize for the discovery of the structure of insulin?",
+                        options: [
+                            "Frederick Sanger",
+                            "Dorothy Hodgkin",
+                            "Lin Pauling",
+                            "Robert Woodward"
+                        ],
+                        correct: 0
+                    }
+                ]
+            },
+            trends: {
+                title: "Current Trends in STEM",
+                questions: [
+                    {
+                        question: "Which technology uses qubits instead of traditional bits?",
+                        options: [
+                            "Artificial Intelligence",
+                            "Quantum Computing",
+                            "Blockchain",
+                            "Internet of Things"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which company launched the James Webb Space Telescope?",
+                        options: [
+                            "SpaceX",
+                            "NASA",
+                            "ESA",
+                            "ISRO"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "What does GPT in ChatGPT stand for?",
+                        options: [
+                            "General Purpose Technology",
+                            "Generative Pre-trained Transformer",
+                            "Global Processing Terminal",
+                            "Guided Program Training"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which technology is focused on developing machines that can perform tasks that typically require human intelligence?",
+                        options: [
+                            "Quantum Computing",
+                            "Artificial Intelligence",
+                            "Nanotechnology",
+                            "Biotechnology"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "What is CRISPR used for?",
+                        options: [
+                            "Data encryption",
+                            "Gene editing",
+                            "Quantum calculations",
+                            "Space exploration"
+                        ],
+                        correct: 1
+                    }
+                ]
+            },
+            women: {
+                title: "Women in STEM – Role Models",
+                questions: [
+                    {
+                        question: "Who was the first woman to win a Nobel Prize?",
+                        options: [
+                            "Rosalind Franklin",
+                            "Dorothy Crowfoot Hodgkin",
+                            "Marie Curie",
+                            "Maria Goeppert-Mayer"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Which mathematician wrote the first algorithm intended to be processed by a machine?",
+                        options: [
+                            "Grace Hopper",
+                            "Katherine Johnson",
+                            "Ada Lovelace",
+                            "Annie Easley"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Who developed the theory of nuclear shell model?",
+                        options: [
+                            "Chien-Shiung Wu",
+                            "Maria Goeppert-Mayer",
+                            "Lise Meitner",
+                            "Barbara McClintock"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which woman played a crucial role in the development of the GPS technology?",
+                        options: [
+                            "Gladys West",
+                            "Katherine Johnson",
+                            "Mae Jemison",
+                            "Sally Ride"
+                        ],
+                        correct: 0
+                    },
+                    {
+                        question: "Who was the first woman to travel to space?",
+                        options: [
+                            "Sally Ride",
+                            "Valentina Tereshkova",
+                            "Mae Jemison",
+                            "Christa McAuliffe"
+                        ],
+                        correct: 1
+                    }
+                ]
+            },
+            india: {
+                title: "Science & Technology in India",
+                questions: [
+                    {
+                        question: "Which Indian organization is responsible for space research?",
+                        options: [
+                            "DRDO",
+                            "ISRO",
+                            "BARC",
+                            "CSIR"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Who is known as the father of the Green Revolution in India?",
+                        options: [
+                            "A.P.J. Abdul Kalam",
+                            "Vikram Sarabhai",
+                            "M.S. Swaminathan",
+                            "C.V. Raman"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Which Indian scientist won the Nobel Prize for the Raman Effect?",
+                        options: [
+                            "Homi J. Bhabha",
+                            "C.V. Raman",
+                            "S. Chandrasekhar",
+                            "Venkatraman Ramakrishnan"
+                        ],
+                        correct: 1
+                    },
+                    {
+                        question: "Which was India's first satellite?",
+                        options: [
+                            "Bhaskara",
+                            "Rohini",
+                            "Aryabhata",
+                            "INSAT-1A"
+                        ],
+                        correct: 2
+                    },
+                    {
+                        question: "Which Indian missile system is known as 'Fire'?",
+                        options: [
+                            "Prithvi",
+                            "Agni",
+                            "Akash",
+                            "Nag"
+                        ],
+                        correct: 1
+                    }
+                ]
+            }
+        };
+
+        // DOM elements
+        const topicsContainer = document.getElementById('topics-container');
+        const quizSection = document.getElementById('quiz-section');
+        const resultsContainer = document.getElementById('results-container');
+        const questionCount = document.getElementById('question-count');
+        const questionText = document.getElementById('question-text');
+        const optionsContainer = document.getElementById('options-container');
+        const progress = document.getElementById('progress');
+        const btnNext = document.getElementById('btn-next');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnRestart = document.getElementById('btn-restart');
+        const scoreElement = document.getElementById('score');
+        const resultMessage = document.getElementById('result-message');
+        const scienceImage = document.getElementById('science-image');
+
+        // Quiz state
+        let currentTopic = null;
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOptions = [];
+
+        // Initialize the quiz
+        function init() {
+            // Add event listeners to topic cards
+            const topicCards = document.querySelectorAll('.topic-card');
+            topicCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    currentTopic = card.getAttribute('data-topic');
+                    startQuiz();
+                });
+            });
+
+            // Add event listeners to buttons
+            btnNext.addEventListener('click', goToNextQuestion);
+            btnPrev.addEventListener('click', goToPrevQuestion);
+            btnRestart.addEventListener('click', restartQuiz);
+        }
+
+        // Start the quiz
+        function startQuiz() {
+            topicsContainer.style.display = 'none';
+            quizSection.style.display = 'block';
+            currentQuestionIndex = 0;
+            score = 0;
+            selectedOptions = [];
+            loadQuestion();
+        }
+
+        // Load a question
+        function loadQuestion() {
+            const question = quizData[currentTopic].questions[currentQuestionIndex];
+            
+            // Update progress bar
+            progress.style.width = `${((currentQuestionIndex + 1) / quizData[currentTopic].questions.length) * 100}%`;
+            
+            // Update question count
+            questionCount.textContent = `Question ${currentQuestionIndex + 1} of ${quizData[currentTopic].questions.length}`;
+            
+            // Set question text
+            questionText.textContent = question.question;
+            
+            // Update image based on topic and question
+            updateScienceImage();
+            
+            // Clear options
+            optionsContainer.innerHTML = '';
+            
+            // Add options
+            question.options.forEach((option, index) => {
+                const optionElement = document.createElement('div');
+                optionElement.classList.add('option');
+                if (selectedOptions[currentQuestionIndex] === index) {
+                    optionElement.classList.add('selected');
+                }
+                optionElement.textContent = option;
+                optionElement.addEventListener('click', () => selectOption(index));
+                optionsContainer.appendChild(optionElement);
+            });
+            
+            // Update buttons
+            btnPrev.style.visibility = currentQuestionIndex === 0 ? 'hidden' : 'visible';
+            btnNext.textContent = currentQuestionIndex === quizData[currentTopic].questions.length - 1 ? 'Finish' : 'Next';
+        }
+
+        // Update science image based on topic
+        function updateScienceImage() {
+            const images = {
+                scientists: "https://placehold.co/600x300/3c40c6/ffffff?text=Famous+Scientists+and+Discoveries",
+                nobel: "https://placehold.co/600x300/ffa801/ffffff?text=Nobel+Prize+Discoveries",
+                trends: "https://placehold.co/600x300/05c46b/ffffff?text=Current+STEM+Trends",
+                women: "https://placehold.co/600x300/ff3f34/ffffff?text=Women+in+STEM",
+                india: "https://placehold.co/600x300/485460/ffffff?text=Science+in+India"
+            };
+            scienceImage.src = images[currentTopic];
+            scienceImage.alt = `${quizData[currentTopic].title} - Representative image`;
+        }
+
+        // Select an option
+        function selectOption(index) {
+            selectedOptions[currentQuestionIndex] = index;
+            
+            // Update UI
+            const options = document.querySelectorAll('.option');
+            options.forEach(option => option.classList.remove('selected'));
+            options[index].classList.add('selected');
+            
+            // Check if answer is correct
+            const correctIndex = quizData[currentTopic].questions[currentQuestionIndex].correct;
+            if (index === correctIndex) {
+                // Correct answer
+                options[index].style.backgroundColor = '#2ecc71';
+                options[index].style.color = 'white';
+                options[index].style.borderColor = '#27ae60';
+            } else {
+                // Incorrect answer
+                options[index].style.backgroundColor = '#e74c3c';
+                options[index].style.color = 'white';
+                options[index].style.borderColor = '#c0392b';
+                
+                // Highlight correct answer
+                options[correctIndex].style.backgroundColor = '#2ecc71';
+                options[correctIndex].style.color = 'white';
+                options[correctIndex].style.borderColor = '#27ae60';
+            }
+            
+            // Disable all options after selection
+            options.forEach(option => {
+                option.style.pointerEvents = 'none';
+            });
+        }
+
+        // Go to next question
+        function goToNextQuestion() {
+            // Check if an option is selected
+            if (selectedOptions[currentQuestionIndex] === undefined) {
+                alert('Please select an answer before proceeding.');
+                return;
+            }
+            
+            // Update score if correct
+            if (selectedOptions[currentQuestionIndex] === quizData[currentTopic].questions[currentQuestionIndex].correct) {
+                score++;
+            }
+            
+            // Check if it's the last question
+            if (currentQuestionIndex === quizData[currentTopic].questions.length - 1) {
+                showResults();
+                return;
+            }
+            
+            // Go to next question
+            currentQuestionIndex++;
+            loadQuestion();
+        }
+
+        // Go to previous question
+        function goToPrevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                loadQuestion();
+            }
+        }
+
+        // Show results
+        function showResults() {
+            quizSection.style.display = 'none';
+            resultsContainer.style.display = 'block';
+            
+            // Update score
+            scoreElement.textContent = `${score}/${quizData[currentTopic].questions.length}`;
+            
+            // Set message based on score
+            if (score === quizData[currentTopic].questions.length) {
+                resultMessage.textContent = 'Perfect! You are a science genius!';
+            } else if (score >= quizData[currentTopic].questions.length * 0.7) {
+                resultMessage.textContent = 'Great job! You know your science well!';
+            } else if (score >= quizData[currentTopic].questions.length * 0.5) {
+                resultMessage.textContent = 'Good effort! Keep learning and try again!';
+            } else {
+                resultMessage.textContent = 'Keep studying science - you\'ll improve!';
+            }
+        }
+
+        // Restart quiz
+        function restartQuiz() {
+            resultsContainer.style.display = 'none';
+            topicsContainer.style.display = 'grid';
+        }
+
+        // Initialize the quiz when the page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

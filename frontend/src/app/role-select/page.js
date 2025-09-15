@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { saveUserRole } from "@/lib/users";
+import styles from "./role-select.module.css";
 
 const classes = [6, 7, 8, 9, 10, 11, 12];
 
@@ -42,56 +43,74 @@ export default function RoleSelectPage() {
   }
 
   return (
-    <div style={{ maxWidth: 520, margin: "4rem auto", padding: 16 }}>
-      {step === 1 && (
-        <div style={{ textAlign: "center" }}>
-          <h2>Choose your role</h2>
-          <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 24 }}>
-            <button aria-pressed={role === "student"} onClick={() => setRole("student")} style={{ padding: "0.75rem 1rem" }}>
-              I am a Student
-            </button>
-            <button aria-pressed={role === "teacher"} onClick={() => setRole("teacher")} style={{ padding: "0.75rem 1rem" }}>
-              I am a Teacher
-            </button>
+    <div className={styles.wrapper}>
+      <div className={styles["role-selection-container"]}>
+        {step === 1 && (
+          <div>
+            <h1 className={styles.heading}>Choose your role</h1>
+            <div className={styles.roleOptions}>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-pressed={role === "student"}
+                onClick={() => setRole("student")}
+                onKeyDown={(e) => (e.key === "Enter" ? setRole("student") : null)}
+                className={`${styles.roleCard} ${role === "student" ? styles.selected : ""}`}
+              >
+                I am a Student
+              </div>
+              <div
+                role="button"
+                tabIndex={0}
+                aria-pressed={role === "teacher"}
+                onClick={() => setRole("teacher")}
+                onKeyDown={(e) => (e.key === "Enter" ? setRole("teacher") : null)}
+                className={`${styles.roleCard} ${role === "teacher" ? styles.selected : ""}`}
+              >
+                I am a Teacher
+              </div>
+            </div>
+            <div className={styles.actions}>
+              <button className={styles.continueBtn} disabled={!canContinue} onClick={() => setStep(2)}>
+                Continue
+              </button>
+            </div>
           </div>
-          <div style={{ marginTop: 24 }}>
-            <button disabled={!canContinue} onClick={() => setStep(2)} style={{ padding: "0.5rem 1rem" }}>Continue</button>
-          </div>
-        </div>
-      )}
+        )}
 
-      {step === 2 && (
-        <div>
-          <h3 style={{ marginBottom: 16 }}>Tell us about you</h3>
-          <div style={{ display: "grid", gap: 12 }}>
-            <label>
-              <span>Name</span>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
-            </label>
-            {role === "student" && (
-              <label>
-                <span>Class</span>
-                <select value={klass} onChange={(e) => setKlass(e.target.value)}>
-                  <option value="">Select class</option>
-                  {classes.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <label>
-              <span>School ID</span>
-              <input value={schoolId} onChange={(e) => setSchoolId(e.target.value)} placeholder="School ID" />
-            </label>
+        {step === 2 && (
+          <div>
+            <h3 className={styles.formHeading}>Tell us about you</h3>
+            <div className={styles.formGrid}>
+              <div className={styles.leftContent}>
+                <label className={styles.formLabel}>Name<span className={styles.requiredStar}>*</span></label>
+                <input className={styles.input} value={name} onChange={(e) => setName(e.target.value)} placeholder="Your full name" />
+              </div>
+              {role === "student" && (
+                <div>
+                  <label className={styles.formLabel}>Class<span className={styles.requiredStar}>*</span></label>
+                  <select className={styles.select} value={klass} onChange={(e) => setKlass(e.target.value)}>
+                    <option value="">Select class</option>
+                    {classes.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              <div>
+                <label className={styles.formLabel}>School ID<span className={styles.requiredStar}>*</span></label>
+                <input className={styles.input} value={schoolId} onChange={(e) => setSchoolId(e.target.value)} placeholder="School ID" />
+              </div>
+            </div>
+            <div className={styles.buttonRow}>
+              <button className={styles.backBtn} onClick={() => setStep(1)} type="button">Back</button>
+              <button className={styles.finishBtn} disabled={!canSubmit || saving} onClick={submit} type="button">
+                {saving ? "Saving..." : "Finish"}
+              </button>
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-            <button onClick={() => setStep(1)} type="button">Back</button>
-            <button disabled={!canSubmit || saving} onClick={submit} type="button">
-              {saving ? "Saving..." : "Finish"}
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

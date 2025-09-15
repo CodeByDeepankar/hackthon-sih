@@ -21,13 +21,13 @@ export default function RootLayout({ children }) {
         <meta name="theme-color" content="#0f172a" />
         <link rel="icon" href="/logo.png" />
       </head>
-      <body>
+      <body className="flex flex-col min-h-screen">
         <ClerkProvider>
           <ThemeProvider>
             <ServiceWorkerRegister />
             <ConnectionStatus />
             <Header />
-            <main>
+            <main className="flex-grow">
               <PageTransition>
                 {children}
               </PageTransition>

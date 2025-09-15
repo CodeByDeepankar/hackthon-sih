@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+
+:root {
+  --primary-blue: #3498db;
+  --primary-green: #2ecc71;
+  --primary-green-dark: #27ae60;
+  --bg-light: #f4f7f9;
+  --card-light: #ffffff;
+  --text-dark: #2c3e50;
+  --border-light: #e0e0e0;
+  --bg-dark: #0b0f14;
+  --card-dark: #0f1115;
+  --text-light: #e6eef6;
+  --border-dark: #1f2937;
+}
+
+.wrapper {
+  min-height: 100vh; /* full viewport */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-light);
+  font-family: 'Poppins', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  padding: 24px;
+  color: var(--text-dark);
+}
+
+.role-selection-container {
+  background: var(--card-light);
+  padding: 64px; /* increased padding for taller appearance */
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-light);
+  /* Responsive min-height so the card grows with wider viewports */
+  min-height: clamp(480px, 40vh, 760px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.heading {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  margin: 0 0 18px 0;
+  text-align: center;
+}
+
+/* Form / inputs */
+.formHeading {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-dark);
+  margin: 0 0 18px 0;
+}
+
+.formGrid {
+  display: grid;
+  gap: 18px;
+  max-width: 420px;
+}
+
+.formLabel {
+  display: block;
+  font-size: 0.95rem;
+  color: rgba(44,62,80,0.9);
+  margin-bottom: 6px;
+}
+
+.requiredStar {
+  color: #e74c3c; /* red */
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+  background: transparent;
+  outline: none;
+  font-size: 0.95rem;
+  box-sizing: border-box;
+}
+
+.input::placeholder { color: #9aa7b2; }
+
+.input:focus,
+.select:focus {
+  box-shadow: 0 6px 18px rgba(52,152,219,0.08);
+  border-color: var(--primary-blue);
+}
+
+.buttonRow {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-top: 20px;
+}
+
+.backBtn {
+  background: transparent;
+  color: var(--text-dark);
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.finishBtn {
+  background: var(--primary-green);
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 12px 48px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, font-size 0.15s ease;
+  font-size: 0.95rem;
+}
+
+.finishBtn:hover:not(:disabled) {
+  background: var(--primary-green-dark);
+  transform: scale(1.03);
+  box-shadow: 0 8px 24px rgba(39,174,96,0.18);
+  font-size: 1.01rem; /* slightly larger for emphasis */
+}
+
+.leftContent {
+  width: 100%;
+}
+
+.roleOptions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.roleCard {
+  padding: 25px 45px;
+  border: 2px solid var(--border-light);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  background: transparent;
+  color: inherit;
+  user-select: none;
+}
+
+.roleCard:hover {
+  border-color: var(--primary-blue);
+  transform: translateY(-5px);
+}
+
+.selected {
+  background: var(--primary-blue);
+  color: #ffffff;
+  border-color: var(--primary-blue);
+  box-shadow: 0 8px 20px rgba(52, 152, 219, 0.18);
+}
+
+.actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.continueBtn {
+  background: var(--primary-green);
+  color: #ffffff;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 15px 50px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.continueBtn:hover:not(:disabled) {
+  background: var(--primary-green-dark);
+  transform: scale(1.05);
+}
+
+.continueBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* small responsive tweaks */
+@media (max-width: 520px) {
+  .roleOptions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .roleCard { padding: 18px 24px; }
+  .role-selection-container { padding: 28px; min-height: auto; }
+}
+
+/* Dark mode overrides using global .dark class added by ThemeProvider */
+.dark .wrapper {
+  background: var(--bg-dark);
+  color: var(--text-light);
+}
+.dark .role-selection-container {
+  background: var(--card-dark);
+  border: 1px solid var(--border-dark);
+  box-shadow: 0 8px 24px rgba(2,6,23,0.6);
+}
+.dark .heading { color: var(--text-light); }
+.dark .roleCard {
+  border-color: var(--border-dark);
+}
+.dark .roleCard:hover {
+  border-color: var(--primary-blue);
+  transform: translateY(-5px);
+}
+.dark .selected {
+  /* Keep selected as primary blue but slightly darker text on dark bg */
+  background: var(--primary-blue);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(52, 152, 219, 0.2);
+}
+.dark .continueBtn {
+  background: var(--primary-green);
+  color: #ffffff;
+}
+.dark .continueBtn:hover:not(:disabled) {
+  background: var(--primary-green-dark);
+}

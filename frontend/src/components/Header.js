@@ -23,6 +23,7 @@ export default function Header() {
     "/settings",
   ].some((p) => pathname?.startsWith(p));
   const isTeacherShell = pathname?.startsWith("/teacher");
+  const isRoleSelect = pathname === "/role-select";
 
   return (
     <header
@@ -70,12 +71,16 @@ export default function Header() {
             <li>
               <Link href="/">Home</Link>
             </li>
-            <li>
-              <Link href="/student">Student</Link>
-            </li>
-            <li>
-              <Link href="/teacher">Teacher</Link>
-            </li>
+            {!isRoleSelect && (
+              <>
+                <li>
+                  <Link href="/student">Student</Link>
+                </li>
+                <li>
+                  <Link href="/teacher">Teacher</Link>
+                </li>
+              </>
+            )}
             <li>
               <Link href="/contact">Contact</Link>
             </li>

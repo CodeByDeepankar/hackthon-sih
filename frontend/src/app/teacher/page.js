@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import { SignedIn, SignedOut, RedirectToSignIn, useUser } from "@clerk/nextjs";
 import { fetchUserRole } from "@/lib/users";
@@ -32,6 +31,8 @@ import {
   TrendingUp,
   ChevronRight,
 } from "lucide-react";
+
+
 
 const StatCard = ({ icon: Icon, label, value }) => (
   <Card className="bg-white/95 border-slate-200 shadow-sm">

@@ -10,7 +10,7 @@ const DATA_CACHE = `glp-data-${VERSION}`;
 const CORE_ASSETS = [
   '/',
   '/manifest.json',
-  '/logo.png',
+  '/logo.webp',
   '/offline.html',
   '/favicon.ico',
   // Fonts commonly used by the app

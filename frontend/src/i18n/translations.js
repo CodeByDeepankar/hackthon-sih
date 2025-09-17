@@ -90,7 +90,8 @@ export const translations = {
       },
       titles: {
         mathBlitz: "Math Blitz",
-  scienceQuest: "STEM Quiz",
+        scienceQuest: "Science Quest",
+        stemQuiz: "STEM Quiz",
       },
     },
     leaderboard: {
@@ -243,7 +244,8 @@ export const translations = {
       },
       titles: {
         mathBlitz: "ମାଥ୍ ବ୍ଲିଟ୍ଜ୍",
-  scienceQuest: "STEM କ୍ୱିଜ୍",
+        scienceQuest: "ବିଜ୍ଞାନ କ୍ୱେଷ୍ଟ",
+        stemQuiz: "STEM କ୍ୱିଜ୍",
       },
     },
     leaderboard: {
@@ -396,7 +398,8 @@ export const translations = {
       },
       titles: {
         mathBlitz: "मैथ ब्लिट्ज",
-  scienceQuest: "STEM क्विज़",
+        scienceQuest: "विज्ञान क्वेस्ट",
+        stemQuiz: "STEM क्विज़",
       },
     },
     leaderboard: {

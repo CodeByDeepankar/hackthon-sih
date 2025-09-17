@@ -1,14 +1,16 @@
 "use client"; // if you use hooks or state
 
-import { UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LanguageToggle from "@/components/LanguageToggle";
+// LanguageToggle replaced by Google Translate widget in PreHeader
+// import LanguageToggle from "@/components/LanguageToggle";
 import OnlineBadge from "@/components/OnlineBadge";
 import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
 import { useState } from "react";
+import PreHeader from "@/components/PreHeader";
 
 export default function Header() {
   const pathname = usePathname();
@@ -35,7 +37,7 @@ export default function Header() {
         {(() => {
           const [ok] = [true];
           return ok ? (
-            <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded" />
+            <Image src="/logo.webp" alt="Logo" width={32} height={32} className="rounded" />
           ) : (
             <div className="w-8 h-8 rounded bg-white text-blue-600 flex items-center justify-center text-xs font-bold">SL</div>
           );
@@ -56,15 +58,27 @@ export default function Header() {
           // Replace nav with language toggle + online badge + Clerk profile button on student pages
           <div className="flex items-center gap-3">
             <OnlineBadge />
-            <LanguageToggle allowed={["en","or","hi"]} />
+            {/* Google Translate dropdown appears in PreHeader */}
             <ThemeToggle />
-            <UserButton />
+            <PreHeader />
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <Link href="/sign-in">Sign in</Link>
+            </SignedOut>
           </div>
         ) : isTeacherShell ? (
           // On teacher routes, remove the default nav links (Home/Student/Teacher/Contact)
           <div className="flex items-center gap-3">
             <ThemeToggle />
-            <UserButton />
+            <PreHeader />
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <Link href="/sign-in">Sign in</Link>
+            </SignedOut>
           </div>
         ) : (
           <ul className="flex space-x-4 items-center">
@@ -88,7 +102,12 @@ export default function Header() {
               <ThemeToggle />
             </li>
             <li>
-              <UserButton />
+              <SignedIn>
+                <UserButton afterSignOutUrl="/" />
+              </SignedIn>
+              <SignedOut>
+                <Link href="/sign-in">Sign in</Link>
+              </SignedOut>
             </li>
           </ul>
         )}

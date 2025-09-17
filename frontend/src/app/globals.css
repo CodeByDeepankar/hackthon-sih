@@ -1,4 +1,16 @@
 @import "tailwindcss";
+
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+
+/* Hide Google Translate injected corner widget/bar if present */
+.VIpgJd-ZVi9od-ORHb-KE6vqe {
+	display: none !important;
+}
+
+
+
 @font-face {
 	font-family: 'CustomAppFont';
 	src: url('/fonts/dcf3e686284c5e7eeca4f8e200392c01.woff2') format('woff2'); /* Regular */
@@ -40,6 +52,16 @@ html, body {
 html, body, * {
 	-ms-overflow-style: none; /* IE and Edge */
 	scrollbar-width: none; /* Firefox */
+	top: 0px !important;
+	
+}
+
+iframe{
+	display: none !important;
+}
+
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
 }
 
 /* WebKit browsers */

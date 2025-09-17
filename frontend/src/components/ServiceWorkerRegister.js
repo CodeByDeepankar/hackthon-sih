@@ -57,7 +57,7 @@ export default function ServiceWorkerRegister() {
               '/teacher/reports',
               '/progress',
               '/fonts/KFOmCnqEu92Fr1Mu4mxK.woff2',
-              '/logo.png',
+              '/logo.webp',
               '/manifest.json',
               // PWA icons (standard + maskable)
               '/icons/icon-192.png',

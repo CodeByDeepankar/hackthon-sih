@@ -6,6 +6,7 @@ export default clerkMiddleware({
     "/",
     "/sign-in(.*)",
     "/sign-up(.*)",
+    "/sso-callback(.*)",
   ],
 });
 

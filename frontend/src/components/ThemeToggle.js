@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useState } from "react";
 import { useTheme } from "@/components/ThemeProvider";
 
 function SunIcon(props) {
@@ -20,6 +21,15 @@ function MoonIcon(props) {
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    // Avoid SSR/CSR mismatch by not rendering until after mount
+    return null;
+  }
+
   const isDark = theme === "dark";
   return (
     <button

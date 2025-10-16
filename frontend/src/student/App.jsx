@@ -18,18 +18,28 @@ import { Card, CardContent } from "./components/ui/card";
 import { Avatar, AvatarFallback } from "./components/ui/avatar";
 import { Badge } from "./components/ui/badge";
 import { Progress } from "./components/ui/progress";
-import { BookOpen, Trophy, Award, User, Home, Gamepad2 } from "lucide-react";
+import { BookOpen, Trophy, Award, User, Home as HomeIcon, Gamepad2, Search as SearchIcon, BarChart3, Users, Zap } from "lucide-react";
 
-export default function App() { const [currentSection, setCurrentSection] = useState('home');
+export default function App() {
+  const [currentSection, setCurrentSection] = useState('home');
   const [selectedCourse, setSelectedCourse] = useState('');
   const [userRole, setUserRole] = useState('student');
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [xpGained, setXpGained] = useState(0);
-  const [showXpAnimation, setShowXpAnimation] = useState(false);
   
   // Mock user data - in a real app this would come from a backend
   const [studentUser, setStudentUser] = useState({
-    name: "Sarah Johnson", level: 10, xp: 2150, xpToNextLevel: 2500, streak: 18, totalBadges: 6, avatar: "SJ", lastLoginDate: new Date().toDateString(), dailyGoalProgress: 2, dailyGoalTarget: 3 });
+    name: "Sarah Johnson",
+    level: 10,
+    xp: 2150,
+    xpToNextLevel: 2500,
+    streak: 18,
+    totalBadges: 6,
+    avatar: "SJ",
+    lastLoginDate: new Date().toDateString(),
+    dailyGoalProgress: 2,
+    dailyGoalTarget: 3
+  });
 
   const teacherUser = { name: "Ms. Rodriguez", school: "Rural Community School", classes: 3, totalStudents: 83, avatar: "MR" };
 
@@ -56,35 +66,33 @@ export default function App() { const [currentSection, setCurrentSection] = useS
   }, []);
 
   // XP Animation effect
-  const triggerXpGain = (amount: number) => { setXpGained(amount);
-    setShowXpAnimation(true);
+  // XP Animation effect
+  const triggerXpGain = (amount) => { setXpGained(amount);
     
     // Update user XP
     setStudentUser(prev => ({
       ...prev, xp: prev.xp + amount }));
 
     // Reset animation after delay
-    setTimeout(() => { setShowXpAnimation(false);
-      setXpGained(0); }, 2000);
+    setTimeout(() => { setXpGained(0); }, 2000);
   };
+  const navigateToSection = (section) => { setCurrentSection(section); };
 
-  const navigateToSection = (section: AppSection) => { setCurrentSection(section); };
-
-  const handleCourseSelect = (courseId: string) => { setSelectedCourse(courseId);
+  const handleCourseSelect = (courseId) => { setSelectedCourse(courseId);
     setCurrentSection('lesson'); };
 
   const handleLessonComplete = () => { // Trigger XP gain animation
     triggerXpGain(50);
     setCurrentSection('dashboard'); };
 
-  const handleQuizComplete = (score: number) => { // Calculate XP based on score
+  const handleQuizComplete = (score) => { // Calculate XP based on score
     const xpEarned = Math.round(score * 2); // 2 XP per percentage point
     triggerXpGain(xpEarned);
     console.log('Quiz completed with score:', score);
     setCurrentSection('dashboard'); };
 
   const studentNavigationItems = [
-    // { id: 'home', label: 'Home', icon: HomeIcon },
+    { id: 'home', label: 'Home', icon: HomeIcon },
     { id: 'search', label: 'Search', icon: SearchIcon },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'courses', label: 'Courses', icon: BookOpen },
@@ -95,7 +103,7 @@ export default function App() { const [currentSection, setCurrentSection] = useS
   ];
 
   const teacherNavigationItems = [
-    // { id: 'home', label: 'Home', icon: HomeIcon },
+    { id: 'home', label: 'Home', icon: HomeIcon },
     { id: 'search', label: 'Search', icon: SearchIcon },
     { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'courses', label: 'Courses', icon: BookOpen },

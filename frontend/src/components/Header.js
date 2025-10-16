@@ -8,7 +8,6 @@ import OnlineBadge from "@/components/OnlineBadge";
 import Image from "next/image";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useTheme } from "@/components/ThemeProvider";
-import { useState } from "react";
 
 export default function Header() {
   const pathname = usePathname();
@@ -31,25 +30,21 @@ export default function Header() {
       style={isLight ? { backgroundColor: "#ffffff", color: "#000000" } : { backgroundColor: "#000000", color: "#f8fafc" }}
     >
       <div className="flex items-center gap-2">
-        {/* Use public asset with absolute path; fallback to initials if missing */}
-        {(() => {
-          const [ok] = [true];
-          return ok ? (
-            <Image src="/logo.png" alt="Logo" width={32} height={32} className="rounded" />
-          ) : (
-            <div className="w-8 h-8 rounded bg-white text-blue-600 flex items-center justify-center text-xs font-bold">SL</div>
-          );
-        })()}
+        {/* Use public asset with absolute path; ensure visibility and clarity */}
+        <Image
+          src="/logo.webp"
+          alt="GYANARATNA logo"
+          width={56}
+          height={56}
+          priority
+          className="object-contain"
+        />
         <h1 className="text-xl font-bold">GYANARATNA</h1>
       </div>
       <nav>
         {isWelcome ? (
           <div className="flex items-center gap-3">
-            <ul className="flex space-x-4">
-              <li>
-                <Link href="/contact">Contact</Link>
-              </li>
-            </ul>
+            {/* Contact removed on welcome page */}
             <ThemeToggle />
           </div>
         ) : isStudentShell ? (
@@ -81,9 +76,6 @@ export default function Header() {
                 </li>
               </>
             )}
-            <li>
-              <Link href="/contact">Contact</Link>
-            </li>
             <li>
               <ThemeToggle />
             </li>

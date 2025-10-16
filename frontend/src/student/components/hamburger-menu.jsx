@@ -21,7 +21,7 @@ export function HamburgerMenu({ userRole, currentSection, studentUser, teacherUs
   return (
   <Sheet open={ isOpen } onOpenChange={ setIsOpen }>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="p-2">
+        <Button variant="ghost" size="sm" className="p-2 cursor-pointer hover:cursor-pointer transform-gpu transition-transform duration-150 hover:scale-105">
           <Menu className="w-5 h-5" />
         </Button>
       </SheetTrigger>
@@ -72,7 +72,7 @@ export function HamburgerMenu({ userRole, currentSection, studentUser, teacherUs
                   <Button
                     key={item.id }
                     variant={ isActive ? "default" : "ghost" }
-                    className="w-full justify-start gap-3 h-12"
+                    className="w-full justify-start gap-3 h-12 cursor-pointer hover:cursor-pointer transform-gpu transition-transform duration-150 hover:scale-[1.02]"
                     onClick={ () => handleNavigate(item.id) }
                   >
                     <IconComponent className="w-5 h-5" />
@@ -89,7 +89,7 @@ export function HamburgerMenu({ userRole, currentSection, studentUser, teacherUs
             <div className="space-y-2">
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-3"
+                className="w-full justify-start gap-3 cursor-pointer hover:cursor-pointer transform-gpu transition-transform duration-150 hover:scale-[1.02]"
                 onClick={() => {
                   setIsOpen(false);
                   router.push("/settings");
@@ -100,7 +100,7 @@ export function HamburgerMenu({ userRole, currentSection, studentUser, teacherUs
               </Button>
               <Button
                 variant="ghost"
-                className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer hover:cursor-pointer transform-gpu transition-transform duration-150 hover:scale-[1.02]"
                 onClick={() => {
                   setIsOpen(false);
                   // Redirect to home after sign out
